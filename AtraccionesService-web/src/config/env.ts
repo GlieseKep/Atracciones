@@ -21,5 +21,3 @@ export const env = {
   authUrl: origin(read('VITE_AUTH_URL', 'http://localhost:5280')),
   catalogSource: catalogSource(),
 } as const;
-
-export const isAuthConfigured = () => env.authUrl !== '';

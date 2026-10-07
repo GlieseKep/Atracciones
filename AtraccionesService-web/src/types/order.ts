@@ -9,13 +9,6 @@ export type OrderStatus =
   | 'PARTIALLY_REFUNDED'
   | 'REFUNDED';
 
-export interface CreateOrderRequest {
-  attractionId: string;
-  date: IsoDate;
-  time: string;
-  quantity: number;
-}
-
 export interface OrderItem {
   id: string;
   attractionId: string;

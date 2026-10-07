@@ -6,7 +6,6 @@
     "declarationMap": false,
     "noUnusedLocals": false,
     "types": ["jest", "node"],
-    "baseUrl": ".",
-    "paths": { "@atracciones/*": ["packages/*/src"] }
+    "paths": { "@atracciones/*": ["./packages/*/src"] }
   }
 }

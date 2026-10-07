@@ -12,8 +12,9 @@ if (Test-Path $zip) { Remove-Item $zip -Force }
 
 Push-Location $root
 try {
-    # tar.exe (incluido en Windows 10+) genera rutas con '/', compatibles con Linux; Compress-Archive no.
-    tar.exe -a -c -f $zip `
+    # tar.exe de Windows 10+ (bsdtar) genera rutas con '/', compatibles con Linux; Compress-Archive no.
+    # Ruta explícita: en los runners de GitHub el tar de Git (GNU, sin soporte zip) puede ir antes en el PATH.
+    & (Join-Path $env:SystemRoot 'System32\tar.exe') -a -c -f $zip `
         --exclude=node_modules --exclude=dist --exclude=.env --exclude=*.tsbuildinfo --exclude=test `
         package.json package-lock.json tsconfig.base.json packages apps
     if ($LASTEXITCODE -ne 0) { throw 'No se pudo crear el zip.' }

@@ -48,11 +48,3 @@ export function formatDate(value: IsoDate, options: Intl.DateTimeFormatOptions =
 export function formatDateTime(value: IsoDateTime): string {
   return new Date(value).toLocaleString(LOCALE, { dateStyle: 'medium', timeStyle: 'short' });
 }
-
-/** Franja horaria del día según la hora local `HH:mm` (filtro "Horario" de Viator). */
-export function timeOfDay(time: string): 'morning' | 'afternoon' | 'evening' {
-  const hour = Number(time.slice(0, 2));
-  if (hour < 12) return 'morning';
-  if (hour < 17) return 'afternoon';
-  return 'evening';
-}

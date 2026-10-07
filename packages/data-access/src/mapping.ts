@@ -15,7 +15,7 @@ import {
   type UserStatus,
 } from '@atracciones/domain';
 import type { AttractionEntity, AvailabilityEntity, ReservationEntity } from './entities/catalog.entities';
-import type { OrderEntity, PaymentSimulationEntity, PurchaseEntity } from './entities/ecommerce.entities';
+import type { OrderEntity, PaymentSimulationEntity } from './entities/ecommerce.entities';
 import type { CustomerEntity, UserEntity } from './entities/identity.entities';
 
 const byName = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
@@ -152,5 +152,3 @@ export const fromPayment = (p: PaymentSimulation): Partial<PaymentSimulationEnti
   processedAt: p.processedAt,
   failureReason: p.failureReason,
 });
-
-export type PurchaseRow = Partial<PurchaseEntity>;

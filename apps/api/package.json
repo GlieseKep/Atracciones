@@ -11,8 +11,6 @@
     "@atracciones/business": "1.0.0",
     "@atracciones/contracts": "1.0.0",
     "@atracciones/data-access": "1.0.0",
-    "@atracciones/data-management": "1.0.0",
-    "@atracciones/domain": "1.0.0",
     "@nestjs/common": "^11.1.0",
     "@nestjs/core": "^11.1.0",
     "@nestjs/platform-express": "^11.1.0",
@@ -25,7 +23,6 @@
     "rxjs": "^7.8.2"
   },
   "devDependencies": {
-    "@nestjs/testing": "^11.1.0",
     "@types/express": "^5.0.6"
   }
 }

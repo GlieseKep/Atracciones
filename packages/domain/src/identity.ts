@@ -93,14 +93,3 @@ export class Customer {
     this.paymentMethodReference = Guard.optional(billing.paymentMethodReference, 'paymentMethodReference', 64);
   }
 }
-
-/** Asignación de un rol local a un usuario. Registra actor y motivo; la revocación no borra el registro. */
-export interface UserRoleAssignment {
-  id: string;
-  userId: string;
-  roleId: string;
-  assignedByUserId: string | null;
-  reason: string;
-  assignedAt: Date;
-  revokedAt: Date | null;
-}

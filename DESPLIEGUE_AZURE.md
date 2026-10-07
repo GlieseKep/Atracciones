@@ -1,4 +1,4 @@
-# DESPLIEGUE_AZURE — Subir EcoAirlines a Azure paso a paso
+# DESPLIEGUE_AZURE — Subir TourGirls a Azure paso a paso
 
 Guía para publicar los 4 componentes en Azure: la **web**, la **API**, la **base de datos PostgreSQL** y **dev-auth**. Hay pasos que
 haces tú en el portal de Azure y cambios de código que hago yo antes de desplegar.
@@ -13,7 +13,7 @@ flowchart LR
   SWA -- "HTTPS + JWT" --> API["API tourgirls<br/>Azure App Service (Linux, Node)"]
   SWA -- "login / registro" --> AUTH["dev-auth<br/>Azure App Service (mismo plan)"]
   API --> DB[("Azure Database for PostgreSQL<br/>Flexible Server")]
-  GH[GitHub: AppVuelos] -- "GitHub Actions<br/>(deploy al hacer push a main)" --> SWA & API & AUTH
+  GH[GitHub: GlieseKep/Atracciones] -- "GitHub Actions<br/>(deploy al hacer push a main)" --> SWA & API & AUTH
 ```
 
 | Parte | Servicio de Azure | Plan recomendado | Por qué |
@@ -36,17 +36,17 @@ flowchart LR
 
 ---
 
-## 2. Qué falta en el código antes de desplegar (🤖 lo hago yo)
+## 2. Estado del código para el despliegue
 
-| # | Cambio | Por qué es necesario |
+| # | Componente | Estado del proyecto y configuración necesaria |
 |---|--------|----------------------|
-| 1 | **PostgreSQL** (criterio 5): repositorios con TypeORM detrás de las interfaces actuales; tablas para reservas, holds, perfiles, rutas, flota, webhooks, etc. Variable `DATABASE_URL` | Sin base de datos, cada reinicio de Azure borra todo |
-| 2 | **Swagger en la nube** (NUBE-01): `PUBLIC_API_URL` para que "Try it out" use la URL pública, y que **Authorize** funcione con token en producción | Los evaluadores probarán desde Swagger |
-| 3 | **dev-auth en la nube** (NUBE-03): permitir arrancarlo en Azure con un secreto real y orígenes CORS públicos, y poder cambiar las contraseñas de prueba por variables | Hoy se niega a arrancar con `NODE_ENV=production` |
-| 4 | **`staticwebapp.config.json`** en la web | Para que rutas como `/admin` o `/mis-viajes` no den 404 al recargar (fallback a `index.html`) |
-| 5 | **Workflows de GitHub Actions** para la API (monorepo con 4 capas) y para dev-auth | El asistente de Azure no sabe compilar un monorepo con workspaces |
+| 1 | **PostgreSQL**: ya están implementados los repositorios TypeORM, las entidades y las migraciones. La API aplica migraciones y puede cargar el catálogo inicial al arrancar. | En Azure se configura `DATABASE_URL` y `DATABASE_SSL=true`; ambos servicios usan PostgreSQL. |
+| 2 | **Swagger en la nube**: el API ya acepta `PUBLIC_API_URL` y configura autenticación Bearer para **Authorize**. | Configurar `PUBLIC_API_URL` con la URL real del App Service de la API. |
+| 3 | **Autenticación en la nube**: `apps/auth` ya lee el secreto JWT, PostgreSQL y CORS desde variables de entorno; las cuentas y contraseñas se gestionan en la base de datos. | Configurar las mismas variables JWT en API y auth. No hay contraseñas de prueba que deban convertirse en variables. |
+| 4 | **Rutas de la web**: `AtraccionesService-web/public/staticwebapp.config.json` ya configura el fallback a `index.html`. | La salida de Azure Static Web Apps debe ser `dist` dentro de `AtraccionesService-web`. |
+| 5 | **Empaquetado del backend**: `tools/package-backend.ps1` crea `out/backend.zip` con el código y los manifiestos del monorepo, sin `node_modules` ni `dist`. | Los workflows de GitHub Actions para API y auth deben publicar ese ZIP en ambas Web Apps y activar la compilación remota de App Service (`SCM_DO_BUILD_DURING_DEPLOYMENT=true`). Azure instala las dependencias del monorepo y ejecuta `npm run build` desde la raíz. |
 
-Cuando estén listos te aviso. Mientras tanto puedes avanzar con la sección 3, que no depende del código.
+La estructura actual es un monorepo npm: API y auth viven en `apps/`, comparten paquetes de `packages/` y la web es un proyecto Vite independiente en `AtraccionesService-web/`.
 
 ---
 
@@ -104,7 +104,7 @@ Un grupo de recursos es una "carpeta" que agrupa todo el proyecto. Borrarlo borr
    - **+ Agregar dirección IP del cliente actual**, para conectarte desde tu PC con pgAdmin o DBeaver.
 4. **Revisar y crear** → **Crear**. Tarda unos 5–10 minutos.
 5. Cuando termine: entra al servidor → **Bases de datos** → **+ Agregar** → nombre **`tourgirls`** → Guardar.
-6. Anota el **nombre del servidor** (aparece en "Información general" como `tourgirls-db-ga.postgres.database.azure.com`).
+6. Anota el **nombre del servidor** (aparece en "Información general" como `tourgirls-db-mms.postgres.database.azure.com`).
 
 ### Paso 3 — Plan de App Service y las dos apps (API y dev-auth)
 
@@ -114,9 +114,9 @@ Un grupo de recursos es una "carpeta" que agrupa todo el proyecto. Borrarlo borr
    | Campo | Valor |
    |-------|-------|
    | Grupo de recursos | `rg-tourgirls` |
-   | Nombre | `tourgirls-api-<iniciales>` → su URL será `https://tourgirls-api-ga.azurewebsites.net` (si Azure agrega un sufijo al nombre, anota la URL exacta que muestre) |
+   | Nombre | `tourgirls-api-<iniciales>` → Azure agrega un sufijo único: anota el **Dominio predeterminado** exacto (en este proyecto, `https://tourgirls-api-mms-hagtfccfdddceheu.westus2-01.azurewebsites.net`) |
    | Publicar | **Código** |
-   | Pila del entorno de ejecución | **Node 24 LTS** (si no aparece, **Node 22 LTS**) |
+   | Pila del entorno de ejecución | **Node 22 LTS** |
    | Sistema operativo | **Linux** |
    | Región | la misma |
    | Plan de Linux | **Crear nuevo** → `asp-tourgirls` |
@@ -140,17 +140,17 @@ Un grupo de recursos es una "carpeta" que agrupa todo el proyecto. Borrarlo borr
    | Grupo de recursos | `rg-tourgirls` |
    | Nombre | `tourgirls-web` |
    | Tipo de plan | **Free** |
-   | Origen de la implementación | **GitHub** → autoriza tu cuenta → organización `gab5453`, repositorio **`AppVuelos`**, rama **`main`** |
-   | Valores preestablecidos de compilación | **React** (o "Custom") |
-   | Ubicación de la aplicación | **`/tourgirls-web`** |
+   | Origen de la implementación | **GitHub** → autoriza tu cuenta → organización `GlieseKep`, repositorio **`Atracciones`**, rama **`main`** |
+   | Valores preestablecidos de compilación | **React** (Vite) |
+   | Ubicación de la aplicación | **`/AtraccionesService-web`** |
    | Ubicación de la salida | **`dist`** |
 
 3. **Revisar y crear** → **Crear**. Azure crea solo un workflow en tu repositorio
    (`.github/workflows/azure-static-web-apps-....yml`) y hace el primer despliegue.
 4. Entra al recurso y anota su **URL** (algo como `https://<nombre-aleatorio>.azurestaticapps.net`).
 
-> El primer despliegue funcionará, pero la web apuntará a `localhost`. Las URLs de la API y de dev-auth se fijan **al compilar**
-> (`VITE_API_URL` y `VITE_AUTH_URL`). Yo las agrego a ese workflow cuando me pases las URLs.
+> La web lee `VITE_API_URL` y `VITE_AUTH_URL` al compilar. Configúralas como variables del workflow de Static Web Apps
+> (no como variables de ejecución de Azure); `VITE_API_URL` debe ser el origen del API, sin `/api/v1`, porque el cliente agrega ese prefijo.
 
 ### Paso 5 — Generar el secreto compartido de los tokens
 
@@ -167,38 +167,46 @@ Guárdalo: va **solo** en la configuración de Azure (paso 6), nunca en el repos
 En cada App Service: **Configuración** → **Variables de entorno** → pestaña **Configuración de la aplicación** → **+ Agregar** →
 **Aplicar**.
 
-**API (`tourgirls-api-ga`):**
+**API (`tourgirls-api-mms`):**
 
 | Nombre | Valor |
 |--------|-------|
-| `NODE_ENV` | `production` |
+| `DATABASE_URL` | `postgres://touradmin:<contraseña-codificada>@tourgirls-db-mms.postgres.database.azure.com:5432/tourgirls` |
+| `DATABASE_SSL` | `true` |
+| `DB_MIGRATIONS_RUN` | `true` (valor predeterminado; aplica las migraciones pendientes al iniciar) |
+| `DB_SEED_CATALOG` | `true` (valor predeterminado; carga el catálogo y la disponibilidad iniciales) |
 | `AUTH_JWT_SECRET` | el secreto del paso 5 |
 | `AUTH_ISSUER` | `tourgirls-auth` |
 | `AUTH_AUDIENCE` | `tourgirls-api` |
-| `CORS_ORIGINS` | la URL de la Static Web App (p. ej. `https://xxx.azurestaticapps.net`), sin `/` al final |
-| `TRUST_PROXY` | `1` (App Service está detrás de un balanceador; sin esto, el rate limit vería a todos como la misma IP) |
+| `CORS_ORIGINS` | la URL de la Static Web App (`https://red-pebble-08e84d70f.1.azurestaticapps.net`), sin `/` al final |
+| `TRUST_PROXY` | `true` (App Service está detrás de un balanceador; sin esto, el rate limit verá una IP incorrecta) |
 | `SWAGGER_ENABLED` | `true` |
-| `PUBLIC_API_URL` | `https://tourgirls-api-ga.azurewebsites.net` *(lo usa el cambio 🤖 2)* |
-| `DEV_AUTH_URL` | `https://tourgirls-auth-ga.azurewebsites.net` |
-| `DATABASE_URL` | la cadena del paso 2 *(lo usa el cambio 🤖 1)* |
-| `WEBHOOK_DELIVERY` | `http` |
-| `SCM_DO_BUILD_DURING_DEPLOYMENT` | `true` |
+| `PUBLIC_API_URL` | `https://tourgirls-api-mms-hagtfccfdddceheu.westus2-01.azurewebsites.net` |
+| `SCM_DO_BUILD_DURING_DEPLOYMENT` | `true` (el ZIP contiene el código fuente; App Service instala dependencias y compila el monorepo) |
 
-Además: **Configuración** → **Configuración general** → **Comando de inicio**: `node TourGirls.API/dist/main.js`. Y activa
-**Siempre activo (Always On)**, disponible en B1.
+Comando de inicio: `node apps/api/dist/main.js`. Activa también **Siempre activo (Always On)**, disponible en B1.
 
-**dev-auth (`tourgirls-auth-ga`):**
+**dev-auth (`tourgirls-auth-mms`):**
 
 | Nombre | Valor |
 |--------|-------|
+| `DATABASE_URL` | la misma cadena de PostgreSQL del API |
+| `DATABASE_SSL` | `true` |
 | `AUTH_JWT_SECRET` | **el mismo** secreto del paso 5 |
 | `AUTH_ISSUER` | `tourgirls-auth` |
 | `AUTH_AUDIENCE` | `tourgirls-api` |
-| `CORS_ORIGINS` | `https://xxx.azurestaticapps.net,https://tourgirls-api-ga.azurewebsites.net` (la web y el Swagger de la API) |
+| `CORS_ORIGINS` | `https://red-pebble-08e84d70f.1.azurestaticapps.net,https://tourgirls-api-mms-hagtfccfdddceheu.westus2-01.azurewebsites.net` (la web y el origen del Swagger) |
+| `ADMIN_EMAILS` | opcional: correos que deben recibir permisos administrativos |
+| `TRUST_PROXY` | `true` |
+| `SCM_DO_BUILD_DURING_DEPLOYMENT` | `true` (el ZIP contiene el código fuente; App Service instala dependencias y compila el monorepo) |
 
-Comando de inicio: `node server.mjs`.
+Comando de inicio: `node apps/auth/dist/main.js`. Activa **Siempre activo (Always On)**.
 
-> **No hace falta definir `PORT`:** App Service lo define solo y la API y dev-auth ya lo leen.
+> **No hace falta definir `PORT`:** App Service lo define y ambos servicios lo leen. El workflow publica el código fuente
+> y App Service compila con las dependencias de desarrollo (incluido TypeScript). No definas `NODE_ENV=production` durante
+> esa compilación ni desactives `SCM_DO_BUILD_DURING_DEPLOYMENT`.
+
+En `DATABASE_URL`, codifica los caracteres especiales de la contraseña para URL (por ejemplo, `@` como `%40`).
 
 ### Paso 7 — Pásame estos datos
 
@@ -207,19 +215,35 @@ Para terminar los workflows y la configuración necesito:
 - [ ] URL de la Static Web App.
 - [ ] Nombre exacto de la app de la API y de la de dev-auth.
 - [ ] Nombre del servidor PostgreSQL. **La contraseña no**: va solo en Azure.
-- [ ] Confirmar que pusiste las variables del paso 6.
+- [ ] Confirmar que configuraste las variables del paso 6.
+
+Para habilitar la administración del catálogo, agrega el correo del administrador a `ADMIN_EMAILS` en dev-auth, regístralo
+desde la web e inicia sesión una vez. Luego, desde una máquina cuya IP esté permitida en PostgreSQL, ejecuta en PowerShell
+el comando con `DATABASE_URL` apuntando a la base de Azure:
+
+```powershell
+$env:DATABASE_URL = "postgres://touradmin:<contraseña-codificada>@tourgirls-db-mms.postgres.database.azure.com:5432/tourgirls?sslmode=require"
+node tools/grant-admin.mjs correo@ejemplo.com
+```
+
+Cierra sesión y vuelve a iniciar para que el nuevo permiso aparezca en el token.
 
 ---
 
 ## 4. Despliegue (🤖 + 🧑)
 
 1. 🤖 Subo a `main`:
-   - los cambios de la sección 2;
-   - los workflows `.github/workflows/deploy-api.yml` y `deploy-auth.yml`;
-   - las variables `VITE_*` en el workflow de la Static Web App.
+   - el workflow `.github/workflows/deploy-api.yml` (runner `windows-latest`), que ejecuta `tools/package-backend.ps1`
+     desde la raíz y despliega
+     `out/backend.zip` en la app de API;
+   - el workflow `.github/workflows/deploy-auth.yml` (runner `windows-latest`), que despliega el mismo ZIP en la app de auth;
+   - en ambas apps, `SCM_DO_BUILD_DURING_DEPLOYMENT=true` para que App Service instale las dependencias y compile los
+     workspaces del monorepo;
+   - `VITE_API_URL` y `VITE_AUTH_URL` en el workflow de Static Web Apps, usando como directorio de aplicación
+     `AtraccionesService-web` y como salida `dist`.
 2. 🧑 Para que GitHub pueda desplegar en cada App Service:
    - en el portal, entra a la app → **Información general** → **Descargar perfil de publicación**;
-   - en GitHub: **AppVuelos** → **Settings** → **Secrets and variables** → **Actions** → **New repository secret**;
+   - en GitHub: **GlieseKep/Atracciones** → **Settings** → **Secrets and variables** → **Actions** → **New repository secret**;
    - nombres: `AZURE_API_PUBLISH_PROFILE` y `AZURE_AUTH_PUBLISH_PROFILE`; valor: el contenido completo del archivo descargado.
    - Si el botón de descarga aparece deshabilitado: en la app → **Configuración** → **Configuración general** → activar **Autenticación
      básica de publicación SCM** → Guardar, y volver a descargar.
@@ -231,13 +255,14 @@ Para terminar los workflows y la configuración necesito:
 
 | Qué | Cómo | Esperado |
 |-----|------|----------|
-| API viva | `https://tourgirls-api-ga.azurewebsites.net/docs` | Swagger con los 3 documentos |
-| dev-auth vivo | `https://tourgirls-auth-ga.azurewebsites.net/health` | `{"status":"ok"}` |
-| Web | URL de la Static Web App | Inicio de TourGirls; recargar en `/admin` no da 404 |
-| Login | Iniciar sesión con un cliente de prueba | Entra y muestra "Hola, …" |
-| Compra completa | Buscar → reservar → pagar con referencia de prueba | Reserva `CONFIRMED` |
-| Persistencia | Reiniciar la API (App Service → **Reiniciar**) y volver a "Mis viajes" | La reserva sigue ahí |
-| Admin | `admin@…` → panel, rutas, flota, observabilidad | Datos reales |
+| API viva | `https://tourgirls-api-mms-hagtfccfdddceheu.westus2-01.azurewebsites.net/health` | `{"status":"ok"}` |
+| Swagger | `https://tourgirls-api-mms-hagtfccfdddceheu.westus2-01.azurewebsites.net/docs` | Documentación OpenAPI del API de atracciones |
+| dev-auth vivo | `https://tourgirls-auth-mms-akcxfugse5c6g6bd.westus2-01.azurewebsites.net/health` | `{"status":"ok"}` |
+| Web | URL de la Static Web App | Portal de TourGirls; recargar una ruta interna, por ejemplo `/admin`, no da 404 |
+| Login | Registrarse o iniciar sesión con una cuenta de prueba | Auth devuelve un JWT que el API acepta |
+| Reserva y compra | Consultar atracciones y disponibilidad; reservar o completar una compra de prueba | El API devuelve el estado correspondiente y persiste la operación |
+| Persistencia | Reiniciar la API (App Service → **Reiniciar**) y volver a consultar las reservas | Los datos siguen en PostgreSQL |
+| Admin | Iniciar sesión con una cuenta autorizada y abrir `/admin` | Se puede administrar el catálogo de atracciones |
 | Logs | App Service → **Supervisión** → **Secuencia de registro** | Ver arranque y errores |
 
 ---
@@ -249,6 +274,6 @@ Para terminar los workflows y la configuración necesito:
 | La API no arranca y el log lista errores de configuración | Falta `AUTH_JWT_SECRET`, `AUTH_ISSUER` o `AUTH_AUDIENCE`, o el secreto tiene menos de 32 caracteres | Revisar el paso 6 (la API valida todo al arrancar a propósito) |
 | La web muestra "No se pudo conectar con el servidor" | `VITE_API_URL` mal puesto al compilar, o `CORS_ORIGINS` sin la URL exacta de la web | Revisar el workflow de la Static Web App y `CORS_ORIGINS` (sin `/` al final) |
 | Login responde 401 en la API después de iniciar sesión | La API y dev-auth tienen distinto `AUTH_JWT_SECRET`, `AUTH_ISSUER` o `AUTH_AUDIENCE` | Deben ser idénticos en ambas apps |
-| Error de conexión a PostgreSQL | Falta permitir los servicios de Azure en "Redes", o falta `sslmode=require` | Paso 2.3 y la cadena de conexión |
-| Recargar `/admin` da 404 | Falta `staticwebapp.config.json` | Cambio 🤖 4 |
+| Error de conexión a PostgreSQL | Falta permitir los servicios de Azure en "Redes" o `DATABASE_SSL=true` | Paso 2.3 y variables del paso 6 |
+| Recargar `/admin` da 404 | La configuración de Static Web Apps no llegó a la salida publicada | Comprueba que `staticwebapp.config.json` esté en `AtraccionesService-web/public` y vuelve a desplegar |
 | La primera petición tarda ~20 s | La app estaba dormida (sin Always On, o en plan F1) | Activar Always On en B1 |

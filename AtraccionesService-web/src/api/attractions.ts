@@ -19,9 +19,6 @@ export const listAttractions = (limit = 10, offset = 0, signal?: AbortSignal) =>
 export const getAttraction = (id: string, signal?: AbortSignal) =>
   http.get<Attraction>(`/atracciones/${id}`, { signal });
 
-export const getAttractionDetails = (ids: string[], languages: string[] = []) =>
-  http.post<SearchAttractionsResponse>('/atracciones/details', { attractions: ids, languages });
-
 export const createAttraction = (body: CreateAttractionRequest, idempotencyKey: string) =>
   http.post<Attraction>('/atracciones', body, { idempotencyKey });
 
