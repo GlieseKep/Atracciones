@@ -38,9 +38,15 @@ const registerSchema = z
 type LoginValues = z.infer<typeof loginSchema>;
 type RegisterValues = z.infer<typeof registerSchema>;
 
-/** Sin ruta solicitada, los administradores entran directamente al panel. */
+/**
+ * Sin ruta solicitada, los administradores entran directamente al panel. Un cliente nunca vuelve al panel
+ * (p. ej. `returnTo=/admin` tras cerrar la sesión de un administrador): va a la página principal.
+ */
 function destination(returnTo: string) {
-  return returnTo === '/' && hasScope(useAuthStore.getState().claims, ADMIN_SCOPE) ? paths.admin() : returnTo;
+  const isAdmin = hasScope(useAuthStore.getState().claims, ADMIN_SCOPE);
+  const adminPath = returnTo === paths.admin() || returnTo.startsWith(`${paths.admin()}/`) || returnTo.startsWith(`${paths.admin()}?`);
+  if (isAdmin) return returnTo === '/' ? paths.admin() : returnTo;
+  return adminPath ? paths.home() : returnTo;
 }
 
 /** Si ya hay sesión, vuelve directamente a la ruta solicitada. */
@@ -145,7 +151,7 @@ export function RegisterPage() {
     try {
       await register(values.name, values.email, values.password);
       notify('¡Cuenta creada! Ya puedes reservar.', 'success');
-      navigate(returnTo, { replace: true });
+      navigate(destination(returnTo), { replace: true });
     } catch (error) {
       const { message, fields } = describe(error);
       for (const [name, messages] of Object.entries(fields)) {
