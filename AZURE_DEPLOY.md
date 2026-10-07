@@ -50,7 +50,7 @@ Cadena de conexión (codifica caracteres especiales de la contraseña, p. ej. `@
 | `TRUST_PROXY` | `true` |
 | `SWAGGER_ENABLED` | `true` |
 | `PUBLIC_API_URL` | `https://tourgirls-api.azurewebsites.net` |
-| `SCM_DO_BUILD_DURING_DEPLOYMENT` | `true` |
+| `SCM_DO_BUILD_DURING_DEPLOYMENT` | `false` |
 
 Opcionales: `DB_SEED_CATALOG` (`true` por defecto: carga las 10 atracciones de ejemplo si la base está vacía y mantiene
 franjas para los próximos `DB_AVAILABILITY_DAYS`, 60 por defecto), `REQUIRE_VERIFIED_EMAIL` (`false` por defecto, porque
@@ -67,22 +67,26 @@ dev-auth no verifica correos), `RATE_LIMIT_PERMIT`, `APP_TIMEZONE`, `HOLD_MINUTE
 | `CORS_ORIGINS` | URL de la web y URL del API (para Swagger), separadas por coma |
 | `ADMIN_EMAILS` | correos que reciben el scope de administración (opcional) |
 | `TRUST_PROXY` | `true` |
-| `SCM_DO_BUILD_DURING_DEPLOYMENT` | `true` |
+| `SCM_DO_BUILD_DURING_DEPLOYMENT` | `false` |
 
-> No definas `NODE_ENV=production`: Azure compila en el servidor y necesita las dependencias de desarrollo
-> (TypeScript). `PORT` tampoco: App Service lo define y las apps lo leen.
+> Azure no compila: recibe `out/backend` ya compilado y con `node_modules` de producción. No definas `PORT`: App Service
+> lo define y las apps lo leen.
 
 En **Configuración general → Comando de inicio** pon el de la tabla inicial y en **Comprobación de estado** la ruta `/health`.
 
 ## 4. Publicar el backend
 
-```powershell
-powershell -ExecutionPolicy Bypass -File tools\package-backend.ps1
-az webapp deploy -g rg-tourgirls -n tourgirls-api  --src-path out\backend.zip --type zip
-az webapp deploy -g rg-tourgirls -n tourgirls-auth --src-path out\backend.zip --type zip
+Lo hacen los workflows `deploy-api.yml` y `deploy-auth.yml` en cada push a `main`. A mano, desde Linux (las dependencias
+se instalan para la plataforma donde se empaqueta):
+
+```bash
+npm ci && npm run build && node tools/package-backend.mjs
+(cd out/backend && zip -qr ../backend.zip .)
+az webapp deploy -g rg-tourgirls -n tourgirls-api  --src-path out/backend.zip --type zip
+az webapp deploy -g rg-tourgirls -n tourgirls-auth --src-path out/backend.zip --type zip
 ```
 
-Azure instala dependencias y ejecuta `npm run build`. Al arrancar, el API aplica las migraciones pendientes y carga el
+Al arrancar, el API aplica las migraciones pendientes y carga el
 catálogo inicial. Comprueba:
 
 - `https://tourgirls-api.azurewebsites.net/health` → `{"status":"ok"}`
@@ -114,4 +118,4 @@ aplicación `/AtraccionesService-web`, salida `dist`. `public/staticwebapp.confi
 | 401 en el API tras iniciar sesión | `AUTH_JWT_SECRET`, `AUTH_ISSUER` o `AUTH_AUDIENCE` distintos entre apps | Igualarlos |
 | La web muestra errores de conexión | `CORS_ORIGINS` sin la URL exacta de la web, o `VITE_*` mal al compilar | Revisar ambos |
 | Error de conexión a PostgreSQL | Falta `DATABASE_SSL=true` o permitir servicios de Azure en Redes | Paso 1 y 3 |
-| El build falla en Azure por TypeScript | `NODE_ENV=production` definido | Quitarlo |
+| `Cannot find module '.../dist/main.js'` | Se publicó código sin compilar | Publicar `out/backend` (workflows) con `SCM_DO_BUILD_DURING_DEPLOYMENT=false` |

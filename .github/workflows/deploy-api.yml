@@ -1,5 +1,5 @@
-# Compila y prueba el backend, empaqueta out/backend.zip y lo publica en la App Service del API.
-# App Service vuelve a instalar dependencias y compilar (SCM_DO_BUILD_DURING_DEPLOYMENT=true).
+# Compila y prueba el backend, arma out/backend (código empaquetado + node_modules de producción para Linux)
+# y lo publica en la App Service del API. Azure no compila nada: solo ejecuta node apps/api/dist/main.js.
 name: Deploy API (App Service)
 
 on:
@@ -11,7 +11,7 @@ on:
       - "package.json"
       - "package-lock.json"
       - "tsconfig.base.json"
-      - "tools/package-backend.ps1"
+      - "tools/package-backend.mjs"
       - ".github/workflows/deploy-api.yml"
   workflow_dispatch:
 
@@ -21,7 +21,7 @@ concurrency:
 
 jobs:
   deploy:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -32,11 +32,10 @@ jobs:
       - run: npm run build
       - run: npm run test:unit
       - name: Empaquetar backend
-        shell: pwsh
-        run: ./tools/package-backend.ps1
+        run: node tools/package-backend.mjs
       - name: Publicar en Azure App Service
         uses: azure/webapps-deploy@v3
         with:
           app-name: tourgirls-api-mms
           publish-profile: ${{ secrets.AZURE_API_PUBLISH_PROFILE }}
-          package: out/backend.zip
+          package: out/backend

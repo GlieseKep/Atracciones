@@ -44,7 +44,7 @@ flowchart LR
 | 2 | **Swagger en la nube**: el API ya acepta `PUBLIC_API_URL` y configura autenticación Bearer para **Authorize**. | Configurar `PUBLIC_API_URL` con la URL real del App Service de la API. |
 | 3 | **Autenticación en la nube**: `apps/auth` ya lee el secreto JWT, PostgreSQL y CORS desde variables de entorno; las cuentas y contraseñas se gestionan en la base de datos. | Configurar las mismas variables JWT en API y auth. No hay contraseñas de prueba que deban convertirse en variables. |
 | 4 | **Rutas de la web**: `AtraccionesService-web/public/staticwebapp.config.json` ya configura el fallback a `index.html`. | La salida de Azure Static Web Apps debe ser `dist` dentro de `AtraccionesService-web`. |
-| 5 | **Empaquetado del backend**: `tools/package-backend.ps1` crea `out/backend.zip` con el código y los manifiestos del monorepo, sin `node_modules` ni `dist`. | Los workflows de GitHub Actions para API y auth deben publicar ese ZIP en ambas Web Apps y activar la compilación remota de App Service (`SCM_DO_BUILD_DURING_DEPLOYMENT=true`). Azure instala las dependencias del monorepo y ejecuta `npm run build` desde la raíz. |
+| 5 | **Empaquetado del backend**: `tools/package-backend.mjs` crea `out/backend` con el API y dev-auth ya compilados (los paquetes `@atracciones/*` van incrustados con esbuild) y un `node_modules` solo de producción. | Los workflows de GitHub Actions compilan en Linux y publican esa carpeta en ambas Web Apps. Azure **no compila**: solo ejecuta el comando de inicio, así que `SCM_DO_BUILD_DURING_DEPLOYMENT` debe ser `false`. |
 
 La estructura actual es un monorepo npm: API y auth viven en `apps/`, comparten paquetes de `packages/` y la web es un proyecto Vite independiente en `AtraccionesService-web/`.
 
@@ -182,7 +182,7 @@ En cada App Service: **Configuración** → **Variables de entorno** → pestañ
 | `TRUST_PROXY` | `true` (App Service está detrás de un balanceador; sin esto, el rate limit verá una IP incorrecta) |
 | `SWAGGER_ENABLED` | `true` |
 | `PUBLIC_API_URL` | `https://tourgirls-api-mms-hagtfccfdddceheu.westus2-01.azurewebsites.net` |
-| `SCM_DO_BUILD_DURING_DEPLOYMENT` | `true` (el ZIP contiene el código fuente; App Service instala dependencias y compila el monorepo) |
+| `SCM_DO_BUILD_DURING_DEPLOYMENT` | `false` (el paquete ya llega compilado y con sus dependencias) |
 
 Comando de inicio: `node apps/api/dist/main.js`. Activa también **Siempre activo (Always On)**, disponible en B1.
 
@@ -198,13 +198,12 @@ Comando de inicio: `node apps/api/dist/main.js`. Activa también **Siempre activ
 | `CORS_ORIGINS` | `https://red-pebble-08e84d70f.1.azurestaticapps.net,https://tourgirls-api-mms-hagtfccfdddceheu.westus2-01.azurewebsites.net` (la web y el origen del Swagger) |
 | `ADMIN_EMAILS` | opcional: correos que deben recibir permisos administrativos |
 | `TRUST_PROXY` | `true` |
-| `SCM_DO_BUILD_DURING_DEPLOYMENT` | `true` (el ZIP contiene el código fuente; App Service instala dependencias y compila el monorepo) |
+| `SCM_DO_BUILD_DURING_DEPLOYMENT` | `false` (el paquete ya llega compilado y con sus dependencias) |
 
 Comando de inicio: `node apps/auth/dist/main.js`. Activa **Siempre activo (Always On)**.
 
-> **No hace falta definir `PORT`:** App Service lo define y ambos servicios lo leen. El workflow publica el código fuente
-> y App Service compila con las dependencias de desarrollo (incluido TypeScript). No definas `NODE_ENV=production` durante
-> esa compilación ni desactives `SCM_DO_BUILD_DURING_DEPLOYMENT`.
+> **No hace falta definir `PORT`:** App Service lo define y ambos servicios lo leen. El workflow compila en GitHub y
+> publica `out/backend` listo para ejecutar; si `/health` da 503, revisa en **Secuencia de registro** el error de arranque.
 
 En `DATABASE_URL`, codifica los caracteres especiales de la contraseña para URL (por ejemplo, `@` como `%40`).
 
@@ -233,12 +232,10 @@ Cierra sesión y vuelve a iniciar para que el nuevo permiso aparezca en el token
 ## 4. Despliegue (🤖 + 🧑)
 
 1. 🤖 Subo a `main`:
-   - el workflow `.github/workflows/deploy-api.yml` (runner `windows-latest`), que ejecuta `tools/package-backend.ps1`
-     desde la raíz y despliega
-     `out/backend.zip` en la app de API;
-   - el workflow `.github/workflows/deploy-auth.yml` (runner `windows-latest`), que despliega el mismo ZIP en la app de auth;
-   - en ambas apps, `SCM_DO_BUILD_DURING_DEPLOYMENT=true` para que App Service instale las dependencias y compile los
-     workspaces del monorepo;
+   - el workflow `.github/workflows/deploy-api.yml` (runner `ubuntu-latest`), que compila, ejecuta las pruebas unitarias,
+     arma `out/backend` con `tools/package-backend.mjs` y lo despliega en la app de API;
+   - el workflow `.github/workflows/deploy-auth.yml`, que despliega la misma carpeta en la app de auth;
+   - en ambas apps, `SCM_DO_BUILD_DURING_DEPLOYMENT=false`: Azure no compila, solo arranca el código;
    - `VITE_API_URL` y `VITE_AUTH_URL` en el workflow de Static Web Apps, usando como directorio de aplicación
      `AtraccionesService-web` y como salida `dist`.
 2. 🧑 Para que GitHub pueda desplegar en cada App Service:
