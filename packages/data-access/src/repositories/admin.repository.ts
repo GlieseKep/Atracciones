@@ -71,7 +71,8 @@ export class TypeOrmAdminRepository implements AdminRepository {
     const q = (sql: string, params: unknown[] = []) => this.manager.query(sql, params) as Promise<Row[]>;
     const [[totals], reservations, orders, payments, revenue, [upcoming]] = await Promise.all([
       q(`SELECT (SELECT count(*)::int FROM attractions) AS attractions,
-                (SELECT count(*)::int FROM customers) AS customers,
+                (SELECT count(*)::int FROM customers c
+                  WHERE NOT EXISTS (SELECT 1 FROM user_roles ur WHERE ur.user_id = c.user_id AND ur.revoked_at IS NULL)) AS customers,
                 (SELECT count(*)::int FROM users WHERE status = 'ACTIVE') AS active_users`),
       q(`SELECT status AS key, count(*)::int AS count FROM reservations GROUP BY status`),
       q(`SELECT status AS key, count(*)::int AS count FROM orders GROUP BY status`),
