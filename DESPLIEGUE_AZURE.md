@@ -182,6 +182,7 @@ En cada App Service: **Configuración** → **Variables de entorno** → pestañ
 | `TRUST_PROXY` | `true` (App Service está detrás de un balanceador; sin esto, el rate limit verá una IP incorrecta) |
 | `SWAGGER_ENABLED` | `true` |
 | `PUBLIC_API_URL` | `https://tourgirls-api-mms-hagtfccfdddceheu.westus2-01.azurewebsites.net` |
+| `PUBLIC_AUTH_URL` | opcional: `https://tourgirls-auth-mms-akcxfugse5c6g6bd.westus2-01.azurewebsites.net` (el Swagger del API enlaza al Swagger de dev-auth para obtener el token) |
 | `SCM_DO_BUILD_DURING_DEPLOYMENT` | `false` (el paquete ya llega compilado y con sus dependencias) |
 
 Comando de inicio: `node apps/api/dist/main.js`. Activa también **Siempre activo (Always On)**, disponible en B1.
@@ -198,6 +199,7 @@ Comando de inicio: `node apps/api/dist/main.js`. Activa también **Siempre activ
 | `CORS_ORIGINS` | `https://red-pebble-08e84d70f.1.azurestaticapps.net,https://tourgirls-api-mms-hagtfccfdddceheu.westus2-01.azurewebsites.net` (la web y el origen del Swagger) |
 | `ADMIN_EMAILS` | opcional: correos que deben recibir permisos administrativos |
 | `TRUST_PROXY` | `true` |
+| `SWAGGER_ENABLED` | opcional: `true` por defecto (Swagger de registro e inicio de sesión en `/docs`) |
 | `SCM_DO_BUILD_DURING_DEPLOYMENT` | `false` (el paquete ya llega compilado y con sus dependencias) |
 
 Comando de inicio: `node apps/auth/dist/main.js`. Activa **Siempre activo (Always On)**.

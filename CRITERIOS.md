@@ -124,8 +124,7 @@ datos reales de PostgreSQL; reservar y comprar sí exigen iniciar sesión.
 - Los endpoints de `/admin/*` documentan la operación y los parámetros, pero **no el esquema de respuesta**. Devuelven
   objetos sin `@ApiResponse({ type })`. **Mejora:** crear clases de respuesta en `packages/contracts/src/admin.ts` y
   anotarlas.
-- **dev-auth** (`/auth/register`, `/auth/login`) no tiene Swagger propio; solo está explicado en el README.
-  **Mejora:** añadir `SwaggerModule` en `apps/auth/src/main.ts`.
+- ✅ **dev-auth** (`/auth/register`, `/auth/login`) tiene su propio Swagger en `/docs` (y `/openapi.json`).
 - Redoc es opcional; se puede servir el mismo `/openapi/v1.json` con Redoc si se pide.
 
 ---

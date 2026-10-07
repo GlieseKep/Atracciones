@@ -13,6 +13,8 @@ export interface AuthConfig {
   corsOrigins: string[];
   adminEmails: string[];
   trustProxy: boolean;
+  /** Swagger UI en `/docs` (por defecto activo). */
+  swaggerEnabled: boolean;
 }
 
 export function loadEnvFile(): void {
@@ -40,6 +42,7 @@ export function readConfig(env: NodeJS.ProcessEnv = process.env): AuthConfig {
     corsOrigins: list(env.CORS_ORIGINS),
     adminEmails: list(env.ADMIN_EMAILS).map((e) => e.toLowerCase()),
     trustProxy: (env.TRUST_PROXY ?? '').toLowerCase() === 'true',
+    swaggerEnabled: (env.SWAGGER_ENABLED ?? 'true').toLowerCase() !== 'false',
   };
   if (config.jwtSecret && config.jwtSecret.length < 32) errors.push('AUTH_JWT_SECRET debe tener al menos 32 caracteres.');
   if (!Number.isInteger(config.port) || config.port <= 0) errors.push('PORT debe ser un entero positivo.');

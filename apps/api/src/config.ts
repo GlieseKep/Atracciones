@@ -9,6 +9,8 @@ export interface ApiConfig {
   corsOrigins: string[];
   swaggerEnabled: boolean;
   publicApiUrl: string | null;
+  /** URL pública de dev-auth: el Swagger del API enlaza a su `/docs` para obtener el token. */
+  publicAuthUrl: string | null;
   trustProxy: boolean;
   rateLimit: { permitLimit: number; windowSeconds: number };
   business: {
@@ -57,6 +59,7 @@ export function readConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
     corsOrigins: list(env.CORS_ORIGINS),
     swaggerEnabled: bool(env.SWAGGER_ENABLED, true),
     publicApiUrl: env.PUBLIC_API_URL?.trim().replace(/\/$/, '') || null,
+    publicAuthUrl: env.PUBLIC_AUTH_URL?.trim().replace(/\/$/, '') || null,
     trustProxy: bool(env.TRUST_PROXY, false),
     rateLimit: { permitLimit: int(env.RATE_LIMIT_PERMIT, 100), windowSeconds: int(env.RATE_LIMIT_WINDOW_SECONDS, 60) },
     business: {

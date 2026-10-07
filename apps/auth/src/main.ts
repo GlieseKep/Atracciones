@@ -2,6 +2,7 @@ import 'reflect-metadata';
 import { Logger, Module, ValidationPipe, type DynamicModule, type INestApplication } from '@nestjs/common';
 import { APP_FILTER, APP_GUARD, NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import type { ValidationError } from 'class-validator';
 import { Pool } from 'pg';
@@ -55,6 +56,21 @@ export async function createAuthApp(config: AuthConfig): Promise<{ app: INestApp
     maxAge: 600,
   });
   app.enableShutdownHooks();
+
+  if (config.swaggerEnabled) {
+    const document = SwaggerModule.createDocument(
+      app,
+      new DocumentBuilder()
+        .setTitle('Autenticación · TourGirls')
+        .setDescription(
+          'Registro e inicio de sesión con correo y contraseña. Devuelve el JWT que exige el API de atracciones: ' +
+            'copia `access_token` y pégalo en **Authorize** del Swagger del API (`/docs` del App Service del API).',
+        )
+        .setVersion('v1')
+        .build(),
+    );
+    SwaggerModule.setup('docs', app, document, { jsonDocumentUrl: 'openapi.json' });
+  }
   return { app, pool };
 }
 

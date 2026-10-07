@@ -39,6 +39,14 @@ describe('dev-auth', () => {
     expect(payload).toMatchObject({ sub: registered.body.user.id, email, email_verified: false, scope: 'attractions:read attractions:book attractions:cancel' });
   });
 
+  it('publica Swagger en /docs con el registro y el inicio de sesión', async () => {
+    await http.get('/docs').expect(200);
+    const spec = await http.get('/openapi.json').expect(200);
+    expect(Object.keys(spec.body.paths).sort()).toEqual(['/auth/login', '/auth/register']);
+    expect(spec.body.paths['/auth/login'].post.responses['200']).toBeDefined();
+    expect(spec.body.components.schemas.LoginRequest.properties).toHaveProperty('password');
+  });
+
   it('concede attractions:write solo a los correos de ADMIN_EMAILS', async () => {
     const res = await http.post('/auth/register').send({ name: 'Jefa', email: 'jefa@tourgirls.test', password: 'Admin2026!' }).expect(201);
     expect(decodeJwt(res.body.access_token).scope).toContain('attractions:write');

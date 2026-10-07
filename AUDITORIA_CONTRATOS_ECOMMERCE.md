@@ -147,23 +147,7 @@ El frontend define las rutas del cliente y las páginas de checkout, perfil y pe
 - Asegurar que `ReservationId` sea único e inmutable.
 - Definir la política de expiración y cancelación parcial.
 
-### 3.4 Flujo de carrito
-
-**Cobertura existente:**
-
-- Crear y consultar carrito.
-- Agregar, modificar y eliminar items.
-- Guardar precio unitario en el momento de agregar.
-
-**Pendiente:**
-
-- Política de carrito activo único por cliente.
-- Validación de disponibilidad al agregar item.
-- Validación de precio final al checkout.
-- Expiración o eliminación del carrito.
-- Recalcular subtotal y descuento.
-
-### 3.5 Flujo de checkout
+### 3.4 Flujo de checkout
 
 **Cobertura existente:**
 
@@ -179,7 +163,7 @@ El frontend define las rutas del cliente y las páginas de checkout, perfil y pe
 - Definir expiración y reintento.
 - Asegurar que el carrito se bloquee mientras la sesión está activa.
 
-### 3.6 Flujo de pedido
+### 3.5 Flujo de pedido
 
 **Cobertura existente:**
 
@@ -197,7 +181,7 @@ El frontend define las rutas del cliente y las páginas de checkout, perfil y pe
 - Creación de una reserva vinculada al pedido.
 - Persistencia de eventos inmutables.
 
-### 3.7 Flujo de pago simulado
+### 3.6 Flujo de pago simulado
 
 **Cobertura existente:**
 
@@ -216,7 +200,7 @@ El frontend define las rutas del cliente y las páginas de checkout, perfil y pe
 - Definir pago parcial y cancelación.
 - Precisa que `paymentMethodReference` solo contiene una referencia local.
 
-### 3.8 Flujo administrativo
+### 3.7 Flujo administrativo
 
 **Estado:** inexistente.
 

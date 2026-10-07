@@ -59,8 +59,11 @@ una vez y ejecuta `node tools/grant-admin.mjs admin@tourgirls.test`. Después ci
 
 ### Swagger
 
-1. `POST http://localhost:5280/auth/login` con `{ "email": "...", "password": "..." }`.
-2. Copia `access_token`, pulsa **Authorize** en http://localhost:5276/docs y pégalo.
+El inicio de sesión no está en el Swagger del API: es del servicio de autenticación, que tiene su propio Swagger.
+
+1. En el Swagger de autenticación (http://localhost:5280/docs; en Azure, `/docs` del App Service de auth), ejecuta
+   `POST /auth/login` con `{ "email": "...", "password": "..." }`.
+2. Copia `access_token`, pulsa **Authorize** en el Swagger del API (http://localhost:5276/docs) y pégalo, sin "Bearer".
 
 ## Scripts
 

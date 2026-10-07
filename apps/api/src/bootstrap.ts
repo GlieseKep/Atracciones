@@ -50,11 +50,17 @@ export async function createApp(config: ApiConfig, dataSource: DataSource): Prom
   });
 
   if (config.swaggerEnabled) {
+    // `POST /auth/login` es del servicio de autenticación (otra aplicación), no de este API.
+    const login = config.publicAuthUrl
+      ? `[POST /auth/login](${config.publicAuthUrl}/docs) en el Swagger del servicio de autenticación (${config.publicAuthUrl}/docs)`
+      : '`POST /auth/login` del servicio de autenticación (tiene su propio Swagger en `/docs`)';
     const builder = new DocumentBuilder()
       .setTitle('API de Atracciones · TourGirls')
       .setDescription(
         'Catálogo, disponibilidad, reservas, compra directa, pedidos y pagos simulados. ' +
-          'Obtén un token en el servicio de autenticación (POST /auth/login) y pégalo en **Authorize**. ' +
+          'La lectura del catálogo y la disponibilidad es pública. Para lo demás, obtén un token con ' +
+          `${login}, copia \`access_token\` y pégalo en **Authorize** (sin escribir "Bearer"). ` +
+          'Las operaciones que reservan, compran, pagan, cancelan o reembolsan exigen la cabecera `Idempotency-Key` (un UUID por intento). ' +
           `Scopes: ${Object.entries(SCOPE_DESCRIPTIONS).map(([s, d]) => `\`${s}\` (${d})`).join(', ')}.`,
       )
       .setVersion('v1')
