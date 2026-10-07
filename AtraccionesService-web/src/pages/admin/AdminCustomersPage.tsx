@@ -12,7 +12,7 @@ import { formatDateTime } from '@/utils/dates';
 import { formatMoney } from '@/utils/formatters';
 import { AdminTable, Sub, type Column } from './AdminTable';
 
-export const USER_STATUS: Record<UserStatus, [string, BadgeTone]> = {
+const USER_STATUS: Record<UserStatus, [string, BadgeTone]> = {
   ACTIVE: ['Activo', 'success'],
   LOCKED: ['Bloqueado', 'warning'],
   DISABLED: ['Desactivado', 'danger'],

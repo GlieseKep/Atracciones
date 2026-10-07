@@ -63,6 +63,9 @@ export interface AdminReservationRow {
   status: string;
   cancellationReason: string | null;
   createdAt: Date;
+  /** Pedido de la compra que originó la reserva; `null` si se reservó sin pagar. */
+  orderId: string | null;
+  orderStatus: string | null;
 }
 
 export interface AdminOrderRow {
@@ -72,12 +75,38 @@ export interface AdminOrderRow {
   serviceDate: IsoDate | null;
   serviceTime: LocalTime | null;
   quantity: number;
-  source: 'PURCHASE' | 'RESERVATION';
   status: string;
   total: AdminMoney;
+  /** Importe ya reembolsado (0 si no hubo reembolsos). */
+  refunded: number;
   paymentStatus: string | null;
+  /** Fin de la retención de cupos mientras el pedido espera el pago. */
+  holdExpiresAt: Date | null;
+  reservationId: string | null;
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface AdminPaymentDetail extends Omit<AdminPaymentRow, 'orderId' | 'customerEmail'> {
+  refunded: number;
+  attemptsDetail: { attemptNumber: number; status: string; responseCode: string; responseMessage: string; createdAt: Date }[];
+  events: { eventType: string; createdAt: Date; amount: number | null; reason: string | null }[];
+}
+
+export interface AdminOrderDetail extends AdminOrderRow {
+  customerName: string | null;
+  cancellationReason: string | null;
+  reservationStatus: string | null;
+  items: {
+    attractionId: string;
+    attractionName: string;
+    serviceDate: IsoDate;
+    serviceTime: LocalTime;
+    quantity: number;
+    unitPrice: AdminMoney;
+  }[];
+  events: { eventType: string; previousStatus: string | null; newStatus: string; createdAt: Date }[];
+  payments: AdminPaymentDetail[];
 }
 
 export interface AdminPaymentRow {
@@ -141,6 +170,9 @@ export interface AdminRepository {
   getUser(userId: string): Promise<AdminUserRow | null>;
   listReservations(filter: AdminListFilter, page: PaginationRequest): Promise<PagedResult<AdminReservationRow>>;
   listOrders(filter: AdminListFilter, page: PaginationRequest): Promise<PagedResult<AdminOrderRow>>;
+  getOrderDetail(orderId: string): Promise<AdminOrderDetail | null>;
+  /** Suma de los reembolsos registrados para una simulación de pago. */
+  getRefundedAmount(paymentId: string): Promise<number>;
   listPayments(filter: AdminListFilter, page: PaginationRequest): Promise<PagedResult<AdminPaymentRow>>;
   listSlots(filter: AdminListFilter, page: PaginationRequest): Promise<PagedResult<AdminSlotRow>>;
   getSlot(slotId: string): Promise<AdminSlotRow | null>;

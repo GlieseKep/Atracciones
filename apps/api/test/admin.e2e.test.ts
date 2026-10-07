@@ -69,7 +69,8 @@ describe('panel de administración', () => {
     expect(reservations.body.data[0]).toMatchObject({ customerEmail: buyer.email, ticketCount: 2, status: 'CONFIRMED', time: '09:00', date: inDays(20) });
 
     const orders = await http.get('/api/v1/admin/orders').query({ search: buyer.email, status: 'PAID' }).set('Authorization', auth).expect(200);
-    expect(orders.body.data[0]).toMatchObject({ id: purchase.body.orderId, source: 'PURCHASE', quantity: 2, total: { amount: 50 }, paymentStatus: 'SETTLED' });
+    expect(orders.body.data[0]).toMatchObject({ id: purchase.body.orderId, quantity: 2, total: { amount: 50 }, refunded: 0, paymentStatus: 'SETTLED', holdExpiresAt: null });
+    expect(reservations.body.data[0]).toMatchObject({ orderId: purchase.body.orderId, orderStatus: 'PAID' });
 
     const payments = await http.get('/api/v1/admin/payments').query({ search: buyer.email }).set('Authorization', auth).expect(200);
     expect(payments.body.data[0]).toMatchObject({ orderId: purchase.body.orderId, status: 'SETTLED', attempts: 1, amount: { amount: 50 } });
@@ -82,6 +83,76 @@ describe('panel de administración', () => {
     expect(report.body.byAttraction.find((r: { attractionId: string }) => r.attractionId === SEEDED.mitad).tickets).toBeGreaterThanOrEqual(2);
 
     await http.get('/api/v1/admin/orders').query({ status: 'NOPE' }).set('Authorization', auth).expect(400);
+  });
+
+  it('muestra el detalle de un pedido y cancela pedidos pendientes liberando los cupos', async () => {
+    const { auth } = await admin();
+    const buyer = await customer();
+    const date = inDays(23);
+    const slotQuery = { attractionId: SEEDED.quilotoa, fromDate: date, toDate: date };
+    const before = await http.get('/api/v1/admin/availability').query(slotQuery).set('Authorization', auth).expect(200);
+    const reservedBefore = before.body.data.find((s: { time: string }) => s.time === '09:00').reserved;
+
+    const pending = await http
+      .post(`/api/v1/attractions/${SEEDED.quilotoa}/purchase`)
+      .set('Authorization', buyer.auth)
+      .set(idem())
+      .send({ date, time: '09:00', quantity: 2 })
+      .expect(201);
+    const orderId = pending.body.orderId;
+
+    const detail = await http.get(`/api/v1/admin/orders/${orderId}`).set('Authorization', auth).expect(200);
+    expect(detail.body).toMatchObject({ status: 'PENDING_PAYMENT', reservationStatus: 'PENDING', payments: [], items: [{ quantity: 2, serviceTime: '09:00' }] });
+    expect(new Date(detail.body.holdExpiresAt).getTime()).toBeGreaterThan(Date.now());
+    expect(detail.body.events.map((e: { eventType: string }) => e.eventType)).toEqual(['ORDER_CREATED']);
+
+    await http.post(`/api/v1/admin/orders/${orderId}/cancel`).set('Authorization', auth).send({ reason: 'x' }).expect(400);
+    const key = idem();
+    const cancelled = await http.post(`/api/v1/admin/orders/${orderId}/cancel`).set('Authorization', auth).set(key).send({ reason: 'Pedido duplicado' }).expect(200);
+    expect(cancelled.body).toMatchObject({ status: 'CANCELLED', cancellationReason: 'Pedido duplicado', reservationStatus: 'CANCELLED', holdExpiresAt: null });
+    await http.post(`/api/v1/admin/orders/${orderId}/cancel`).set('Authorization', auth).set(key).send({ reason: 'Pedido duplicado' }).expect(200);
+    await http.post(`/api/v1/admin/orders/${orderId}/cancel`).set('Authorization', auth).set(idem()).send({ reason: 'Otra vez' }).expect(409);
+
+    const after = await http.get('/api/v1/admin/availability').query(slotQuery).set('Authorization', auth).expect(200);
+    expect(after.body.data.find((s: { time: string }) => s.time === '09:00').reserved).toBe(reservedBefore);
+    await http.post(`/api/v1/admin/orders/${orderId}/refunds`).set('Authorization', auth).set(idem()).send({ reason: 'No aplica' }).expect(409);
+  });
+
+  it('reembolsa pedidos pagados en parcial y total sin superar lo cobrado', async () => {
+    const { auth } = await admin();
+    const buyer = await customer();
+    const date = inDays(24);
+    const paid = await http
+      .post(`/api/v1/attractions/${SEEDED.mitad}/purchase`)
+      .set('Authorization', buyer.auth)
+      .set(idem())
+      .send({ date, time: '14:00', quantity: 2 })
+      .expect(201);
+    const orderId = paid.body.orderId;
+    await http
+      .post('/api/v1/payments/simulations')
+      .set('Authorization', buyer.auth)
+      .set(idem())
+      .send({ orderId, paymentMethod: 'CARD', amount: 50, currency: 'USD' })
+      .expect(201);
+
+    await http.post(`/api/v1/admin/orders/${orderId}/cancel`).set('Authorization', auth).set(idem()).send({ reason: 'No se puede' }).expect(409);
+    await http.post(`/api/v1/admin/orders/${orderId}/refunds`).set('Authorization', auth).set(idem()).send({ amount: 50.01, reason: 'Demasiado' }).expect(409);
+    await http.post(`/api/v1/admin/orders/${orderId}/refunds`).set('Authorization', auth).set(idem()).send({ amount: 1.234, reason: 'Decimales' }).expect(400);
+
+    const partial = await http.post(`/api/v1/admin/orders/${orderId}/refunds`).set('Authorization', auth).set(idem()).send({ amount: 20, reason: 'Una entrada sin usar' }).expect(200);
+    expect(partial.body).toMatchObject({ status: 'PARTIALLY_REFUNDED', refunded: 20, reservationStatus: 'CONFIRMED' });
+    expect(partial.body.payments[0]).toMatchObject({ status: 'PARTIALLY_REFUNDED', refunded: 20 });
+    await http.post(`/api/v1/admin/orders/${orderId}/refunds`).set('Authorization', auth).set(idem()).send({ amount: 30.01, reason: 'Excede' }).expect(409);
+
+    const full = await http.post(`/api/v1/admin/orders/${orderId}/refunds`).set('Authorization', auth).set(idem()).send({ reason: 'Visita cancelada' }).expect(200);
+    expect(full.body).toMatchObject({ status: 'REFUNDED', refunded: 50, reservationStatus: 'CANCELLED' });
+    expect(full.body.events.map((e: { newStatus: string }) => e.newStatus)).toEqual(['PENDING_PAYMENT', 'PAID', 'PARTIALLY_REFUNDED', 'REFUNDED']);
+    expect(full.body.payments[0].events.filter((e: { amount: number | null }) => e.amount !== null).map((e: { amount: number }) => e.amount)).toEqual([20, 30]);
+    await http.post(`/api/v1/admin/orders/${orderId}/refunds`).set('Authorization', auth).set(idem()).send({ reason: 'Otra' }).expect(409);
+
+    const audit = await dataSource.query(`SELECT action FROM audit_events WHERE resource_id = $1 ORDER BY created_at`, [orderId]);
+    expect(audit.map((a: { action: string }) => a.action)).toEqual(['order.partially_refunded', 'order.refunded']);
   });
 
   it('gestiona la capacidad y crea franjas sin bajar de lo reservado', async () => {

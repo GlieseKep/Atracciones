@@ -1,6 +1,5 @@
 import { Link } from 'react-router-dom';
-import { adminApi, type AdminOrder, type AdminPayment, type AdminReservation } from '@/api/admin';
-import { Badge } from '@/components/common/Badge';
+import { adminApi, type AdminPayment, type AdminReservation } from '@/api/admin';
 import { OrderStatusBadge, PaymentStatusBadge, ReservationStatusBadge } from '@/components/profile/StatusBadge';
 import { formatDate, formatDateTime } from '@/utils/dates';
 import { formatMoney, shortCode } from '@/utils/formatters';
@@ -13,15 +12,6 @@ const RESERVATION_STATUSES = [
   { value: 'CANCELLED', label: 'Cancelada' },
 ];
 
-const ORDER_STATUSES = [
-  { value: 'PENDING_PAYMENT', label: 'Pendiente de pago' },
-  { value: 'PAID', label: 'Pagado' },
-  { value: 'FULFILLED', label: 'Completado' },
-  { value: 'CANCELLED', label: 'Cancelado' },
-  { value: 'PARTIALLY_REFUNDED', label: 'Reembolso parcial' },
-  { value: 'REFUNDED', label: 'Reembolsado' },
-];
-
 const PAYMENT_STATUSES = [
   { value: 'SETTLED', label: 'Liquidado' },
   { value: 'AUTHORIZED', label: 'Autorizado' },
@@ -29,6 +19,7 @@ const PAYMENT_STATUSES = [
   { value: 'REJECTED', label: 'Rechazado' },
   { value: 'FAILED', label: 'Fallido' },
   { value: 'CANCELLED', label: 'Cancelado' },
+  { value: 'PARTIALLY_REFUNDED', label: 'Reembolso parcial' },
   { value: 'REFUNDED', label: 'Reembolsado' },
 ];
 
@@ -55,8 +46,27 @@ const reservationColumns: Column<AdminReservation>[] = [
       </>
     ),
   },
+  {
+    header: 'Origen',
+    cell: (r) =>
+      r.orderId ? (
+        <>
+          <OrderLink orderId={r.orderId} label={`Compra · ${shortCode(r.orderId)}`} />
+          {r.orderStatus && <OrderStatusBadge status={r.orderStatus} />}
+        </>
+      ) : (
+        <span className="text-ink-muted">Reserva sin pago</span>
+      ),
+  },
   { header: 'Creada', cell: (r) => <span className="text-xs">{formatDateTime(r.createdAt)}</span> },
 ];
+
+/** Abre el detalle del pedido en la sección Pedidos. */
+const OrderLink = ({ orderId, label }: { orderId: string; label: string }) => (
+  <Link to={`/admin/pedidos?pedido=${orderId}`} className="block font-mono text-xs font-semibold text-brand-600 hover:underline">
+    {label}
+  </Link>
+);
 
 /** Reservas de todos los clientes (incluidas las que genera la compra directa). */
 export function AdminReservationsPage() {
@@ -73,42 +83,9 @@ export function AdminReservationsPage() {
   );
 }
 
-const orderColumns: Column<AdminOrder>[] = [
-  { header: 'Pedido', cell: (o) => <span className="font-mono text-xs">{shortCode(o.id)}</span> },
-  { header: 'Cliente', cell: (o) => o.customerEmail },
-  {
-    header: 'Atracción',
-    cell: (o) => (
-      <>
-        {o.attractionName ?? '—'}
-        {o.serviceDate && <Sub>{`${formatDate(o.serviceDate)} · ${o.serviceTime} · ${o.quantity} ${o.quantity === 1 ? 'entrada' : 'entradas'}`}</Sub>}
-      </>
-    ),
-  },
-  { header: 'Origen', cell: (o) => <Badge tone="neutral">{o.source === 'PURCHASE' ? 'Compra directa' : 'Reserva'}</Badge> },
-  { header: 'Total', cell: (o) => formatMoney(o.total.amount, o.total.currency), align: 'right' },
-  { header: 'Estado', cell: (o) => <OrderStatusBadge status={o.status} /> },
-  { header: 'Pago', cell: (o) => (o.paymentStatus ? <PaymentStatusBadge status={o.paymentStatus} /> : <span className="text-ink-muted">Sin pago</span>) },
-  { header: 'Creado', cell: (o) => <span className="text-xs">{formatDateTime(o.createdAt)}</span> },
-];
-
-export function AdminOrdersPage() {
-  return (
-    <AdminTable
-      title="Pedidos"
-      load={adminApi.orders}
-      columns={orderColumns}
-      rowKey={(o) => o.id}
-      searchPlaceholder="Correo, código o atracción"
-      statuses={ORDER_STATUSES}
-      dateLabel="Creado"
-    />
-  );
-}
-
 const paymentColumns: Column<AdminPayment>[] = [
   { header: 'Referencia', cell: (p) => <span className="font-mono text-xs">{p.gatewayReference}</span> },
-  { header: 'Pedido', cell: (p) => <span className="font-mono text-xs">{shortCode(p.orderId)}</span> },
+  { header: 'Pedido', cell: (p) => <OrderLink orderId={p.orderId} label={shortCode(p.orderId)} /> },
   { header: 'Cliente', cell: (p) => p.customerEmail },
   { header: 'Método', cell: (p) => (p.paymentMethod === 'CARD' ? 'Tarjeta' : 'Transferencia') },
   { header: 'Importe', cell: (p) => formatMoney(p.amount.amount, p.amount.currency), align: 'right' },

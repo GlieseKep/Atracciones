@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsIn, IsInt, IsOptional, IsString, IsUUID, Length, Max, MaxLength, Min } from 'class-validator';
+import { IsIn, IsInt, IsNumber, IsOptional, IsString, IsUUID, Length, Max, MaxLength, Min } from 'class-validator';
 import { IsIsoDate, IsLocalTime } from './common';
 
 /** Filtros de los listados de `/admin/*`. Cada listado documenta qué valores de `status` admite. */
@@ -39,4 +39,20 @@ export class UpdateUserStatusRequest {
 export class RoleAssignmentRequest {
   @ApiProperty({ format: 'uuid' }) @IsUUID() roleId!: string;
   @ApiPropertyOptional({ maxLength: 500 }) @IsOptional() @IsString() @Length(1, 500) reason?: string;
+}
+
+/** Cancelación administrativa de un pedido pendiente de pago. */
+export class AdminCancelOrderRequest {
+  @ApiProperty({ maxLength: 500, example: 'Solicitado por el cliente por teléfono' }) @IsString() @Length(1, 500) reason!: string;
+}
+
+/** Reembolso simulado. Sin `amount` se devuelve todo lo pendiente (reembolso total). */
+export class AdminRefundRequest {
+  @ApiPropertyOptional({ example: 10, minimum: 0.01, description: 'Importe a devolver; si se omite, el total pendiente.' })
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 2 }, { message: 'amount admite como máximo dos decimales.' })
+  @Min(0.01, { message: 'amount debe ser mayor que cero.' })
+  amount?: number;
+
+  @ApiProperty({ maxLength: 500, example: 'Visita cancelada por mal tiempo' }) @IsString() @Length(1, 500) reason!: string;
 }

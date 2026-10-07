@@ -46,6 +46,8 @@ export const IdempotentOperations = {
   CreateOrder: 'create-order',
   CancelOrder: 'cancel-order',
   SimulatePayment: 'simulate-payment',
+  AdminCancelOrder: 'admin-cancel-order',
+  AdminRefundOrder: 'admin-refund-order',
 } as const;
 
 /** JSON con claves ordenadas: dos payloads equivalentes producen el mismo hash. */

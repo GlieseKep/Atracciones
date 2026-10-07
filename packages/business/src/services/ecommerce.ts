@@ -4,6 +4,7 @@ import {
   PaymentSimulation,
   PAYMENT_METHODS,
   Reservation,
+  roundCents,
   type IsoDate,
   type LocalTime,
   type PaymentMethod,
@@ -142,6 +143,51 @@ export class OrderWorkflow {
         await uow.reservations.update(reservation);
       }
     }
+  }
+
+  /**
+   * Reembolso simulado de un pedido pagado contra su pago liquidado. Si con este importe se devuelve el total, el pedido
+   * y el pago pasan a REFUNDED, la reserva se cancela y los cupos se liberan; si no, quedan PARTIALLY_REFUNDED.
+   * `alreadyRefunded` es la suma de reembolsos anteriores del pago.
+   */
+  async refundOrder(
+    uow: UnitOfWork, order: Order, payment: PaymentSimulation, amount: number, alreadyRefunded: number, reason: string,
+  ): Promise<{ full: boolean; refunded: number }> {
+    const now = this.clock.utcNow;
+    const refunded = roundCents(alreadyRefunded + amount);
+    const full = refunded >= payment.amount.amount;
+    const next = full ? 'REFUNDED' : 'PARTIALLY_REFUNDED';
+
+    payment.transitionTo(next, now);
+    await uow.payments.update(payment);
+    await uow.paymentEvents.add({
+      id: newId(), paymentSimulationId: payment.id, eventType: `PAYMENT_${next}`, createdAt: now,
+      payload: JSON.stringify({
+        status: payment.status, amount: payment.amount.amount, currency: payment.amount.currency,
+        gatewayReference: payment.gatewayReference, refundAmount: amount, refundedTotal: refunded, reason,
+      }),
+    });
+
+    const previous = order.transitionTo(next, now);
+    await uow.orders.update(order);
+    await uow.orderEvents.add({ id: newId(), orderId: order.id, eventType: `ORDER_${next}`, previousStatus: previous, newStatus: next, createdAt: now });
+
+    if (full) {
+      const reservation = order.reservationId ? await uow.reservations.getById(order.reservationId) : null;
+      // Solo se liberan cupos si la reserva seguía vigente: si ya estaba cancelada, sus cupos ya se devolvieron.
+      if (reservation?.canCancel) {
+        reservation.cancel(reason);
+        await uow.reservations.update(reservation);
+        for (const item of order.items) {
+          await uow.availability.releaseQuantity(item.availabilitySlotId, item.quantity);
+          await uow.inventory.add({
+            id: newId(), attractionId: item.attractionId, availabilitySlotId: item.availabilitySlotId, quantity: -item.quantity,
+            movementType: 'CANCELLED', purchaseId: order.purchaseId, reservationId: order.reservationId, createdAt: now,
+          });
+        }
+      }
+    }
+    return { full, refunded };
   }
 
   private async markPaid(uow: UnitOfWork, order: Order, now: Date): Promise<void> {

@@ -105,6 +105,8 @@ export interface PurchaseRepository {
 }
 
 export interface OrderRepository {
+  /** Sin regla de propietario: solo para casos de uso administrativos. */
+  getById(orderId: string): Promise<Order | null>;
   getByIdForCustomer(orderId: string, customerId: string): Promise<Order | null>;
   getByReservationId(reservationId: string): Promise<Order | null>;
   add(order: Order): Promise<void>;

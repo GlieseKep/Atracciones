@@ -3,6 +3,7 @@ import type { IsoDate, LocalTime, UserStatus } from '@atracciones/domain';
 import {
   PagedResult,
   type AdminListFilter,
+  type AdminOrderDetail,
   type AdminOrderRow,
   type AdminPaymentRow,
   type AdminRepository,
@@ -20,6 +21,9 @@ import type { EntityManager } from 'typeorm';
 const SOLD_ORDER_STATUSES = `('PAID', 'FULFILLED', 'PARTIALLY_REFUNDED')`;
 
 type Row = Record<string, unknown>;
+
+/** `payment_events.payload` como objeto jsonb (las filas antiguas pueden guardar el JSON como texto escalar). */
+const PAYLOAD = `(CASE WHEN jsonb_typeof(e.payload) = 'string' THEN (e.payload #>> '{}')::jsonb ELSE e.payload END)`;
 
 /** Acumula condiciones `WHERE` con parámetros posicionales (`$1`, `$2`, ...). */
 class Where {
@@ -156,11 +160,14 @@ export class TypeOrmAdminRepository implements AdminRepository {
       .when(filter.toDate, (p) => `r.date <= ${p(filter.toDate)}::date`)
       .when(filter.attractionId, (p) => `r.attraction_id = ${p(filter.attractionId)}::uuid`);
     return this.page(
-      `FROM reservations r LEFT JOIN attractions a ON a.id = r.attraction_id`,
+      `FROM reservations r
+         LEFT JOIN attractions a ON a.id = r.attraction_id
+         LEFT JOIN orders o ON o.reservation_id = r.id`,
       where,
       `r.id, r.attraction_id, a.name AS attraction_name, r.customer_name, r.customer_email,
        to_char(r.date, 'YYYY-MM-DD') AS date, to_char(r.time, 'HH24:MI') AS time, r.ticket_count,
-       r.total_currency, r.total_amount::float8 AS total_amount, r.status, r.cancellation_reason, r.created_at`,
+       r.total_currency, r.total_amount::float8 AS total_amount, r.status, r.cancellation_reason, r.created_at,
+       o.id AS order_id, o.status AS order_status`,
       'r.created_at DESC',
       page,
       (r) => ({
@@ -176,8 +183,52 @@ export class TypeOrmAdminRepository implements AdminRepository {
         status: String(r.status),
         cancellationReason: (r.cancellation_reason as string | null) ?? null,
         createdAt: r.created_at as Date,
+        orderId: (r.order_id as string | null) ?? null,
+        orderStatus: (r.order_status as string | null) ?? null,
       }),
     );
+  }
+
+  private static readonly ORDER_FROM = `FROM orders o
+         JOIN customers c ON c.id = o.customer_id
+         JOIN users u ON u.id = c.user_id
+         LEFT JOIN LATERAL (
+           SELECT oi.attraction_id, a.name AS attraction_name, oi.service_date, oi.service_time,
+                  (SELECT sum(x.quantity)::int FROM order_items x WHERE x.order_id = o.id) AS quantity
+             FROM order_items oi LEFT JOIN attractions a ON a.id = oi.attraction_id
+            WHERE oi.order_id = o.id ORDER BY oi.service_date, oi.service_time LIMIT 1
+         ) i ON true
+         LEFT JOIN LATERAL (
+           SELECT ps.status FROM payment_simulations ps WHERE ps.order_id = o.id ORDER BY ps.created_at DESC LIMIT 1
+         ) p ON true
+         LEFT JOIN LATERAL (
+           SELECT coalesce(sum((${PAYLOAD} ->> 'refundAmount')::numeric), 0)::float8 AS amount
+             FROM payment_simulations ps JOIN payment_events e ON e.payment_simulation_id = ps.id
+            WHERE ps.order_id = o.id AND ${PAYLOAD} ? 'refundAmount'
+         ) rf ON true`;
+
+  private static readonly ORDER_SELECT = `o.id, u.email, c.billing_name, o.status, o.currency, o.total_amount::float8 AS total_amount,
+       o.hold_expires_at, o.reservation_id, o.cancellation_reason, o.created_at, o.updated_at,
+       i.attraction_name, to_char(i.service_date, 'YYYY-MM-DD') AS service_date, to_char(i.service_time, 'HH24:MI') AS service_time,
+       coalesce(i.quantity, 0) AS quantity, p.status AS payment_status, rf.amount AS refunded`;
+
+  private static toOrderRow(r: Row): AdminOrderRow {
+    return {
+      id: String(r.id),
+      customerEmail: String(r.email),
+      attractionName: (r.attraction_name as string | null) ?? null,
+      serviceDate: (r.service_date as string | null) ?? null,
+      serviceTime: (r.service_time as string | null) ?? null,
+      quantity: num(r.quantity),
+      status: String(r.status),
+      total: { currency: String(r.currency), amount: num(r.total_amount) },
+      refunded: num(r.refunded),
+      paymentStatus: (r.payment_status as string | null) ?? null,
+      holdExpiresAt: (r.hold_expires_at as Date | null) ?? null,
+      reservationId: (r.reservation_id as string | null) ?? null,
+      createdAt: r.created_at as Date,
+      updatedAt: r.updated_at as Date,
+    };
   }
 
   listOrders(filter: AdminListFilter, page: PaginationRequest): Promise<PagedResult<AdminOrderRow>> {
@@ -190,40 +241,108 @@ export class TypeOrmAdminRepository implements AdminRepository {
       .when(filter.fromDate, (p) => `o.created_at >= ${p(filter.fromDate)}::date`)
       .when(filter.toDate, (p) => `o.created_at < ${p(filter.toDate)}::date + 1`)
       .when(filter.attractionId, (p) => `i.attraction_id = ${p(filter.attractionId)}::uuid`);
-    return this.page(
-      `FROM orders o
-         JOIN customers c ON c.id = o.customer_id
-         JOIN users u ON u.id = c.user_id
-         LEFT JOIN LATERAL (
-           SELECT oi.attraction_id, a.name AS attraction_name, oi.service_date, oi.service_time,
-                  (SELECT sum(x.quantity)::int FROM order_items x WHERE x.order_id = o.id) AS quantity
-             FROM order_items oi LEFT JOIN attractions a ON a.id = oi.attraction_id
-            WHERE oi.order_id = o.id ORDER BY oi.service_date, oi.service_time LIMIT 1
-         ) i ON true
-         LEFT JOIN LATERAL (
-           SELECT ps.status FROM payment_simulations ps WHERE ps.order_id = o.id ORDER BY ps.created_at DESC LIMIT 1
-         ) p ON true`,
-      where,
-      `o.id, u.email, o.status, o.currency, o.total_amount::float8 AS total_amount, o.purchase_id, o.created_at, o.updated_at,
-       i.attraction_name, to_char(i.service_date, 'YYYY-MM-DD') AS service_date, to_char(i.service_time, 'HH24:MI') AS service_time,
-       coalesce(i.quantity, 0) AS quantity, p.status AS payment_status`,
-      'o.created_at DESC',
-      page,
-      (r) => ({
-        id: String(r.id),
-        customerEmail: String(r.email),
-        attractionName: (r.attraction_name as string | null) ?? null,
-        serviceDate: (r.service_date as string | null) ?? null,
-        serviceTime: (r.service_time as string | null) ?? null,
-        quantity: num(r.quantity),
-        source: r.purchase_id ? 'PURCHASE' : 'RESERVATION',
-        status: String(r.status),
-        total: { currency: String(r.currency), amount: num(r.total_amount) },
-        paymentStatus: (r.payment_status as string | null) ?? null,
-        createdAt: r.created_at as Date,
-        updatedAt: r.updated_at as Date,
-      }),
+    return this.page(TypeOrmAdminRepository.ORDER_FROM, where, TypeOrmAdminRepository.ORDER_SELECT, 'o.created_at DESC', page, TypeOrmAdminRepository.toOrderRow);
+  }
+
+  async getOrderDetail(orderId: string): Promise<AdminOrderDetail | null> {
+    const rows: Row[] = await this.manager.query(
+      `SELECT ${TypeOrmAdminRepository.ORDER_SELECT}, r.status AS reservation_status, r.customer_name
+         ${TypeOrmAdminRepository.ORDER_FROM} LEFT JOIN reservations r ON r.id = o.reservation_id
+        WHERE o.id = $1`,
+      [orderId],
     );
+    if (!rows.length) return null;
+    const row = rows[0];
+    const [items, events, payments, attempts, paymentEvents] = await Promise.all([
+      this.manager.query(
+        `SELECT oi.attraction_id, coalesce(a.name, '(atracción eliminada)') AS attraction_name,
+                to_char(oi.service_date, 'YYYY-MM-DD') AS service_date, to_char(oi.service_time, 'HH24:MI') AS service_time,
+                oi.quantity, oi.unit_price_currency, oi.unit_price_amount::float8 AS unit_price_amount
+           FROM order_items oi LEFT JOIN attractions a ON a.id = oi.attraction_id
+          WHERE oi.order_id = $1 ORDER BY oi.service_date, oi.service_time`,
+        [orderId],
+      ) as Promise<Row[]>,
+      this.manager.query(
+        `SELECT event_type, previous_status, new_status, created_at FROM order_events WHERE order_id = $1 ORDER BY created_at, id`,
+        [orderId],
+      ) as Promise<Row[]>,
+      this.manager.query(
+        `SELECT id, payment_method, status, amount::float8 AS amount, currency, gateway_reference, failure_reason, created_at, processed_at
+           FROM payment_simulations WHERE order_id = $1 ORDER BY created_at`,
+        [orderId],
+      ) as Promise<Row[]>,
+      this.manager.query(
+        `SELECT pa.payment_simulation_id, pa.attempt_number, pa.status, pa.response_code, pa.response_message, pa.created_at
+           FROM payment_attempts pa JOIN payment_simulations ps ON ps.id = pa.payment_simulation_id
+          WHERE ps.order_id = $1 ORDER BY pa.attempt_number`,
+        [orderId],
+      ) as Promise<Row[]>,
+      this.manager.query(
+        `SELECT e.payment_simulation_id, e.event_type, e.created_at,
+                (${PAYLOAD} ->> 'refundAmount')::float8 AS refund_amount, ${PAYLOAD} ->> 'reason' AS reason
+           FROM payment_events e JOIN payment_simulations ps ON ps.id = e.payment_simulation_id
+          WHERE ps.order_id = $1 ORDER BY e.created_at, e.id`,
+        [orderId],
+      ) as Promise<Row[]>,
+    ]);
+    return {
+      ...TypeOrmAdminRepository.toOrderRow(row),
+      customerName: (row.billing_name as string | null) ?? (row.customer_name as string | null) ?? null,
+      cancellationReason: (row.cancellation_reason as string | null) ?? null,
+      reservationStatus: (row.reservation_status as string | null) ?? null,
+      items: items.map((i) => ({
+        attractionId: String(i.attraction_id),
+        attractionName: String(i.attraction_name),
+        serviceDate: String(i.service_date),
+        serviceTime: String(i.service_time),
+        quantity: num(i.quantity),
+        unitPrice: { currency: String(i.unit_price_currency), amount: num(i.unit_price_amount) },
+      })),
+      events: events.map((e) => ({
+        eventType: String(e.event_type),
+        previousStatus: (e.previous_status as string | null) ?? null,
+        newStatus: String(e.new_status),
+        createdAt: e.created_at as Date,
+      })),
+      payments: payments.map((p) => {
+        const own = (rows: Row[]) => rows.filter((x) => x.payment_simulation_id === p.id);
+        const evs = own(paymentEvents);
+        return {
+          id: String(p.id),
+          paymentMethod: String(p.payment_method),
+          status: String(p.status),
+          amount: { currency: String(p.currency), amount: num(p.amount) },
+          gatewayReference: String(p.gateway_reference),
+          attempts: own(attempts).length,
+          failureReason: (p.failure_reason as string | null) ?? null,
+          createdAt: p.created_at as Date,
+          processedAt: (p.processed_at as Date | null) ?? null,
+          refunded: evs.reduce((sum, e) => sum + num(e.refund_amount), 0),
+          attemptsDetail: own(attempts).map((a) => ({
+            attemptNumber: num(a.attempt_number),
+            status: String(a.status),
+            responseCode: String(a.response_code),
+            responseMessage: String(a.response_message),
+            createdAt: a.created_at as Date,
+          })),
+          events: evs.map((e) => ({
+            eventType: String(e.event_type),
+            createdAt: e.created_at as Date,
+            amount: e.refund_amount === null ? null : num(e.refund_amount),
+            reason: (e.reason as string | null) ?? null,
+          })),
+        };
+      }),
+    };
+  }
+
+  async getRefundedAmount(paymentId: string): Promise<number> {
+    const [row]: Row[] = await this.manager.query(
+      `SELECT coalesce(sum((${PAYLOAD} ->> 'refundAmount')::numeric), 0)::float8 AS amount
+         FROM payment_events e WHERE e.payment_simulation_id = $1 AND ${PAYLOAD} ? 'refundAmount'`,
+      [paymentId],
+    );
+    return num(row.amount);
   }
 
   listPayments(filter: AdminListFilter, page: PaginationRequest): Promise<PagedResult<AdminPaymentRow>> {

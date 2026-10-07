@@ -174,11 +174,12 @@ const PAYMENT_TRANSITIONS: Partial<Record<PaymentStatus, PaymentStatus[]>> = {
   PENDING: ['AUTHORIZED', 'REJECTED', 'FAILED'],
   AUTHORIZED: ['SETTLED', 'CANCELLED', 'FAILED'],
   SETTLED: ['PARTIALLY_REFUNDED', 'REFUNDED'],
+  PARTIALLY_REFUNDED: ['PARTIALLY_REFUNDED', 'REFUNDED'],
 };
 
 /**
  * Pago simulado. Transiciones: PENDING → AUTHORIZED | REJECTED | FAILED; AUTHORIZED → SETTLED | CANCELLED | FAILED;
- * SETTLED → PARTIALLY_REFUNDED | REFUNDED. No contiene datos de tarjeta ni credenciales.
+ * SETTLED | PARTIALLY_REFUNDED → PARTIALLY_REFUNDED | REFUNDED. No contiene datos de tarjeta ni credenciales.
  */
 export class PaymentSimulation {
   private _status: PaymentStatus;

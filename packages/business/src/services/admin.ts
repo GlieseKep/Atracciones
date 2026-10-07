@@ -1,6 +1,7 @@
-import { newId, ORDER_STATUSES, PAYMENT_STATUSES, RESERVATION_STATUSES, USER_STATUSES, type UserStatus } from '@atracciones/domain';
+import { newId, ORDER_STATUSES, roundCents, PAYMENT_STATUSES, RESERVATION_STATUSES, USER_STATUSES, type UserStatus } from '@atracciones/domain';
 import type {
   AdminListFilter,
+  AdminOrderDetail,
   AdminOrderRow,
   AdminPaymentRow,
   AdminReservationRow,
@@ -18,7 +19,8 @@ import { PaginationResult } from '../models';
 import { LocalPermissions, type AuthenticatedUser } from '../shared/auth';
 import type { BusinessClock } from '../shared/clock';
 import type { LocalPermissionService } from '../shared/customers';
-import type { TransactionRunner } from '../shared/transactions';
+import { IdempotentOperations, type IdempotencyService, type TransactionRunner } from '../shared/transactions';
+import type { OrderWorkflow } from './ecommerce';
 import { isIsoDate, isSlotTime, validatePagination, ValidationErrors } from '../shared/validation';
 
 /** Consulta común de los listados administrativos. */
@@ -56,6 +58,8 @@ export class AdminService {
     private readonly transactions: TransactionRunner,
     private readonly permissions: LocalPermissionService,
     private readonly clock: BusinessClock,
+    private readonly idempotency: IdempotencyService,
+    private readonly workflow: OrderWorkflow,
   ) {}
 
   async summary(actor: AuthenticatedUser, days = 30): Promise<AdminSummary> {
@@ -83,6 +87,68 @@ export class AdminService {
   async orders(actor: AuthenticatedUser, query: AdminListQuery): Promise<PaginationResult<AdminOrderRow>> {
     const filter = await this.prepare(actor, query, ORDER_STATUSES);
     return toPage(await this.units.create().admin.listOrders(filter, query), query);
+  }
+
+  async order(actor: AuthenticatedUser, orderId: string): Promise<AdminOrderDetail> {
+    await this.permissions.ensure(actor, LocalPermissions.AdminManage);
+    const order = await this.units.create().admin.getOrderDetail(orderId);
+    if (!order) throw new NotFoundError('El pedido no existe.');
+    return order;
+  }
+
+  /** Cancela un pedido pendiente de pago de cualquier cliente: libera cupos y cancela su reserva. */
+  async cancelOrder(actor: AuthenticatedUser, orderId: string, reason: string, idempotencyKey: string): Promise<AdminOrderDetail> {
+    await this.permissions.ensure(actor, LocalPermissions.AdminManage);
+    new ValidationErrors().requiredText(reason, 'reason', 500).throwIfAny();
+    const text = reason.trim();
+    await this.idempotency.execute(actor, IdempotentOperations.AdminCancelOrder, idempotencyKey, { orderId, reason: text }, async (uow) => {
+      const order = await uow.orders.getById(orderId);
+      if (!order) throw new NotFoundError('El pedido no existe.');
+      if (order.status !== 'PENDING_PAYMENT') {
+        throw new ConflictError(
+          ConflictError.INVALID_STATE_TRANSITION,
+          `Solo se cancelan pedidos pendientes de pago; este está ${order.status}. Un pedido pagado se reembolsa.`,
+        );
+      }
+      await this.workflow.cancelPendingOrder(uow, order, text);
+      await this.audit(uow, actor, 'order.cancelled', 'order', orderId, text);
+      return { orderId };
+    });
+    return (await this.units.create().admin.getOrderDetail(orderId))!;
+  }
+
+  /**
+   * Reembolso simulado (total si se omite `amount`). Solo para pedidos pagados o parcialmente reembolsados con un pago
+   * liquidado; nunca supera lo cobrado. El reembolso total cancela la reserva y libera los cupos.
+   */
+  async refundOrder(
+    actor: AuthenticatedUser, orderId: string, amount: number | null, reason: string, idempotencyKey: string,
+  ): Promise<AdminOrderDetail> {
+    await this.permissions.ensure(actor, LocalPermissions.AdminManage);
+    new ValidationErrors()
+      .requiredText(reason, 'reason', 500)
+      .when(amount !== null && (!Number.isFinite(amount) || amount <= 0 || roundCents(amount) !== amount), 'amount', 'amount debe ser mayor que cero y tener como máximo dos decimales.')
+      .throwIfAny();
+    const text = reason.trim();
+    await this.idempotency.execute(actor, IdempotentOperations.AdminRefundOrder, idempotencyKey, { orderId, amount, reason: text }, async (uow) => {
+      const order = await uow.orders.getById(orderId);
+      if (!order) throw new NotFoundError('El pedido no existe.');
+      if (order.status !== 'PAID' && order.status !== 'PARTIALLY_REFUNDED') {
+        throw new ConflictError(ConflictError.INVALID_STATE_TRANSITION, `Solo se reembolsan pedidos pagados; este está ${order.status}.`);
+      }
+      const payment = (await uow.payments.getByOrder(order.id)).find((p) => p.status === 'SETTLED' || p.status === 'PARTIALLY_REFUNDED');
+      if (!payment) throw new ConflictError('NO_SETTLED_PAYMENT', 'El pedido no tiene un pago liquidado que reembolsar.');
+      const already = await uow.admin.getRefundedAmount(payment.id);
+      const remaining = roundCents(payment.amount.amount - already);
+      const value = amount ?? remaining;
+      if (value > remaining) {
+        throw new ConflictError('REFUND_EXCEEDS_PAYMENT', `El reembolso no puede superar lo pendiente de devolver (${remaining.toFixed(2)} ${payment.amount.currency}).`);
+      }
+      const result = await this.workflow.refundOrder(uow, order, payment, value, already, text);
+      await this.audit(uow, actor, result.full ? 'order.refunded' : 'order.partially_refunded', 'order', orderId, `${value.toFixed(2)} ${payment.amount.currency}: ${text}`);
+      return { orderId, refunded: result.refunded };
+    });
+    return (await this.units.create().admin.getOrderDetail(orderId))!;
   }
 
   async payments(actor: AuthenticatedUser, query: AdminListQuery): Promise<PaginationResult<AdminPaymentRow>> {

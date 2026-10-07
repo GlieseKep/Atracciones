@@ -64,6 +64,9 @@ export interface AdminReservation {
   status: 'PENDING' | 'CONFIRMED' | 'CANCELLED';
   cancellationReason: string | null;
   createdAt: IsoDateTime;
+  /** Pedido de la compra que originó la reserva; null si se reservó sin pagar. */
+  orderId: string | null;
+  orderStatus: AdminOrder['status'] | null;
 }
 
 export interface AdminOrder {
@@ -73,12 +76,29 @@ export interface AdminOrder {
   serviceDate: IsoDate | null;
   serviceTime: string | null;
   quantity: number;
-  source: 'PURCHASE' | 'RESERVATION';
   status: 'PENDING_PAYMENT' | 'PAID' | 'FULFILLED' | 'CANCELLED' | 'PARTIALLY_REFUNDED' | 'REFUNDED';
   total: Money;
+  refunded: number;
   paymentStatus: AdminPayment['status'] | null;
+  holdExpiresAt: IsoDateTime | null;
+  reservationId: string | null;
   createdAt: IsoDateTime;
   updatedAt: IsoDateTime;
+}
+
+export interface AdminOrderPayment extends Omit<AdminPayment, 'orderId' | 'customerEmail'> {
+  refunded: number;
+  attemptsDetail: { attemptNumber: number; status: string; responseCode: string; responseMessage: string; createdAt: IsoDateTime }[];
+  events: { eventType: string; createdAt: IsoDateTime; amount: number | null; reason: string | null }[];
+}
+
+export interface AdminOrderDetail extends AdminOrder {
+  customerName: string | null;
+  cancellationReason: string | null;
+  reservationStatus: AdminReservation['status'] | null;
+  items: { attractionId: string; attractionName: string; serviceDate: IsoDate; serviceTime: string; quantity: number; unitPrice: Money }[];
+  events: { eventType: string; previousStatus: AdminOrder['status'] | null; newStatus: AdminOrder['status']; createdAt: IsoDateTime }[];
+  payments: AdminOrderPayment[];
 }
 
 export interface AdminPayment {
@@ -140,6 +160,11 @@ export const adminApi = {
   customers: list<AdminCustomer>('/admin/customers'),
   reservations: list<AdminReservation>('/admin/reservations'),
   orders: list<AdminOrder>('/admin/orders'),
+  order: (orderId: string, signal?: AbortSignal) => http.get<AdminOrderDetail>(`/admin/orders/${orderId}`, { signal }),
+  cancelOrder: (orderId: string, reason: string, idempotencyKey: string) =>
+    http.post<AdminOrderDetail>(`/admin/orders/${orderId}/cancel`, { reason }, { idempotencyKey }),
+  refundOrder: (orderId: string, body: { amount?: number; reason: string }, idempotencyKey: string) =>
+    http.post<AdminOrderDetail>(`/admin/orders/${orderId}/refunds`, body, { idempotencyKey }),
   payments: list<AdminPayment>('/admin/payments'),
   availability: list<AdminSlot>('/admin/availability'),
   roles: (signal?: AbortSignal) => http.get<AdminRole[]>('/admin/roles', { signal }),

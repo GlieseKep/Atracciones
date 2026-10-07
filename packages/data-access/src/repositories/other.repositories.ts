@@ -105,6 +105,11 @@ export class TypeOrmPurchaseRepository implements PurchaseRepository {
 export class TypeOrmOrderRepository implements OrderRepository {
   constructor(private readonly manager: EntityManager) {}
 
+  async getById(orderId: string): Promise<Order | null> {
+    const row = await this.manager.findOne(OrderEntity, { where: { id: orderId }, relations: ['items'] });
+    return row ? toOrder(row) : null;
+  }
+
   async getByIdForCustomer(orderId: string, customerId: string): Promise<Order | null> {
     const row = await this.manager.findOne(OrderEntity, { where: { id: orderId, customerId }, relations: ['items'] });
     return row ? toOrder(row) : null;

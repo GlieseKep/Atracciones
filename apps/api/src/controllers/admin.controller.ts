@@ -1,8 +1,10 @@
-import { Body, Controller, Delete, Get, Inject, Param, Patch, Post, Put, Query, Res } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Delete, Get, HttpCode, Inject, Param, Patch, Post, Put, Query, Res } from '@nestjs/common';
+import { ApiBearerAuth, ApiHeader, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { LocalPermissions, type AdminListQuery as ListQuery, type AuthenticatedUser, type BusinessServices } from '@atracciones/business';
 import {
+  AdminCancelOrderRequest,
   AdminListQuery,
+  AdminRefundRequest,
   AdminReportQuery,
   CreateSlotRequest,
   RoleAssignmentRequest,
@@ -12,7 +14,7 @@ import {
 import type { Response } from 'express';
 import { CurrentUser, RequirePermission, RequireScope, Scopes } from '../auth/auth';
 import { BUSINESS } from '../config';
-import { ParseResourceId } from '../http/request-helpers';
+import { IDEMPOTENCY_HEADER, IdempotencyKey, ParseResourceId } from '../http/request-helpers';
 import { apiPath, toPaged } from '../http/responses';
 
 const toQuery = (q: AdminListQuery): ListQuery => ({
@@ -26,6 +28,8 @@ const toQuery = (q: AdminListQuery): ListQuery => ({
 });
 
 const same = <T>(item: T) => item;
+
+const idempotencyDoc = ApiHeader({ name: IDEMPOTENCY_HEADER, required: true, description: 'UUID único por intento lógico de la operación.' });
 
 /**
  * Panel de administración. Exige el scope `attractions:write` y el permiso local `admin:manage` (rol `admin`).
@@ -95,6 +99,38 @@ export class AdminController {
   @ApiOperation({ summary: 'Todos los pedidos. status: PENDING_PAYMENT, PAID, FULFILLED, CANCELLED, PARTIALLY_REFUNDED, REFUNDED' })
   async orders(@Query() query: AdminListQuery, @CurrentUser() user: AuthenticatedUser) {
     return toPaged(await this.business.admin.orders(user, toQuery(query)), same);
+  }
+
+  @Get('orders/:orderId')
+  @ApiOperation({ summary: 'Detalle de un pedido: elementos, historial de estados, pagos con intentos y reembolsos, reserva vinculada' })
+  order(@Param('orderId', ParseResourceId) orderId: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.business.admin.order(user, orderId);
+  }
+
+  @Post('orders/:orderId/cancel')
+  @HttpCode(200)
+  @idempotencyDoc
+  @ApiOperation({ summary: 'Cancelar un pedido pendiente de pago (libera cupos y cancela la reserva)' })
+  cancelOrder(
+    @Param('orderId', ParseResourceId) orderId: string,
+    @Body() body: AdminCancelOrderRequest,
+    @IdempotencyKey() key: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.business.admin.cancelOrder(user, orderId, body.reason, key);
+  }
+
+  @Post('orders/:orderId/refunds')
+  @HttpCode(200)
+  @idempotencyDoc
+  @ApiOperation({ summary: 'Reembolso simulado total o parcial de un pedido pagado; el total cancela la reserva' })
+  refundOrder(
+    @Param('orderId', ParseResourceId) orderId: string,
+    @Body() body: AdminRefundRequest,
+    @IdempotencyKey() key: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.business.admin.refundOrder(user, orderId, body.amount ?? null, body.reason, key);
   }
 
   @Get('payments')

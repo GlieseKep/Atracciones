@@ -66,7 +66,7 @@ export function createBusinessServices(
     orders: new OrderService(units, idempotency, customers, slots, workflow),
     payments: new PaymentSimulationService(idempotency, customers, workflow, clock),
     permissions,
-    admin: new AdminService(units, transactions, permissions, clock),
+    admin: new AdminService(units, transactions, permissions, clock, idempotency, workflow),
     clock,
   };
 }

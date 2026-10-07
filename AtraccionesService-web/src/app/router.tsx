@@ -27,7 +27,7 @@ const AdminAvailabilityPage = lazy(() => import('@/pages/admin/AdminAvailability
 const AdminCustomersPage = lazy(() => import('@/pages/admin/AdminCustomersPage'));
 const AdminReportsPage = lazy(() => import('@/pages/admin/AdminReportsPage'));
 const AdminReservationsPage = lazy(() => import('@/pages/admin/AdminOperationsPages').then((m) => ({ default: m.AdminReservationsPage })));
-const AdminOrdersPage = lazy(() => import('@/pages/admin/AdminOperationsPages').then((m) => ({ default: m.AdminOrdersPage })));
+const AdminOrdersPage = lazy(() => import('@/pages/admin/AdminOrdersPage'));
 const AdminPaymentsPage = lazy(() => import('@/pages/admin/AdminOperationsPages').then((m) => ({ default: m.AdminPaymentsPage })));
 
 const privateRoute = (element: React.ReactNode) => <ProtectedRoute>{element}</ProtectedRoute>;
