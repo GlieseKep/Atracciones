@@ -12,4 +12,6 @@ export interface AuthenticatedUser {
 /** Permisos locales consultados además de los scopes del token. */
 export const LocalPermissions = {
   CatalogWrite: 'catalog:write',
+  /** Clientes, reservas, pedidos, pagos, disponibilidad, roles y reportes del panel de administración. */
+  AdminManage: 'admin:manage',
 } as const;

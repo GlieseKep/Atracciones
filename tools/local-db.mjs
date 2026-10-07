@@ -14,7 +14,11 @@ const user = 'postgres';
 const password = 'tourgirls-local';
 const databases = ['tourgirls'];
 
-const pg = new EmbeddedPostgres({ databaseDir, user, password, port, persistent: true, onLog: () => {}, onError: (e) => console.error(String(e)) });
+// UTF-8 como en Azure (en Windows el valor por defecto sería WIN1252). Solo aplica al crear el clúster.
+const initdbFlags = ['--encoding=UTF8', '--locale=C'];
+const pg = new EmbeddedPostgres({
+  databaseDir, user, password, port, persistent: true, initdbFlags, onLog: () => {}, onError: (e) => console.error(String(e)),
+});
 
 if (!existsSync(join(databaseDir, 'PG_VERSION'))) {
   console.log('[db] Inicializando el clúster en .data/postgres ...');

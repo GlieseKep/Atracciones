@@ -2,7 +2,7 @@
   "name": "tourgirls",
   "private": true,
   "version": "1.0.0",
-  "description": "TourGirls: API de atracciones (NestJS + PostgreSQL), servicio de autenticación y portal web.",
+  "description": "TourGirls: API de atracciones (NestJS + PostgreSQL), servicio de autenticaciÃ³n y portal web.",
   "workspaces": [
     "packages/domain",
     "packages/data-management",
@@ -18,7 +18,7 @@
   "scripts": {
     "build": "tsc -b apps/api apps/auth",
     "clean": "tsc -b apps/api apps/auth --clean",
-    "test": "jest",
+    "test": "jest --runInBand",
     "test:unit": "jest --selectProjects unit",
     "test:e2e": "jest --selectProjects e2e --runInBand",
     "db:local": "node tools/local-db.mjs",

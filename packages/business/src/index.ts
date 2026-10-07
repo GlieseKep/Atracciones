@@ -1,4 +1,5 @@
 import type { UnitOfWorkFactory } from '@atracciones/data-management';
+import { AdminService } from './services/admin';
 import { AttractionService, AvailabilityService } from './services/catalog';
 import { OrderService, OrderWorkflow, PaymentSimulationService, PurchaseService } from './services/ecommerce';
 import { CustomerService, UserProfileService } from './services/identity';
@@ -12,6 +13,7 @@ import { SlotRequestValidator } from './shared/validation';
 
 export * from './errors';
 export * from './models';
+export * from './services/admin';
 export * from './services/catalog';
 export * from './services/ecommerce';
 export * from './services/identity';
@@ -34,6 +36,7 @@ export interface BusinessServices {
   orders: OrderService;
   payments: PaymentSimulationService;
   permissions: LocalPermissionService;
+  admin: AdminService;
   clock: BusinessClock;
 }
 
@@ -63,6 +66,7 @@ export function createBusinessServices(
     orders: new OrderService(units, idempotency, customers, slots, workflow),
     payments: new PaymentSimulationService(idempotency, customers, workflow, clock),
     permissions,
+    admin: new AdminService(units, transactions, permissions, clock),
     clock,
   };
 }

@@ -23,17 +23,12 @@ const NotFoundPage = lazy(() => import('@/pages/NotFoundPage'));
 const AdminLayout = lazy(() => import('@/pages/admin/AdminLayout'));
 const AdminDashboardPage = lazy(() => import('@/pages/admin/AdminDashboardPage'));
 const AdminCatalogPage = lazy(() => import('@/pages/admin/AdminCatalogPage'));
-const AdminPendingPage = lazy(() => import('@/pages/admin/AdminPendingPage'));
-
-const PENDING = {
-  disponibilidad: ['Disponibilidad', 'Consultar cupos por franja y registrar ajustes auditados.'],
-  reservas: ['Reservas', 'Buscar reservas de todos los clientes y resolver incidencias.'],
-  pedidos: ['Pedidos', 'Consultar pedidos y ejecutar las transiciones de estado permitidas.'],
-  pagos: ['Pagos', 'Consultar simulaciones de pago y solicitar reembolsos simulados, sin datos de tarjeta.'],
-  clientes: ['Clientes', 'Consultar la información de clientes necesaria para soporte.'],
-  usuarios: ['Usuarios y roles', 'Activar o desactivar perfiles locales y asignar roles según la política.'],
-  reportes: ['Reportes', 'Consultar métricas agregadas con paginación.'],
-} as const;
+const AdminAvailabilityPage = lazy(() => import('@/pages/admin/AdminAvailabilityPage'));
+const AdminCustomersPage = lazy(() => import('@/pages/admin/AdminCustomersPage'));
+const AdminReportsPage = lazy(() => import('@/pages/admin/AdminReportsPage'));
+const AdminReservationsPage = lazy(() => import('@/pages/admin/AdminOperationsPages').then((m) => ({ default: m.AdminReservationsPage })));
+const AdminOrdersPage = lazy(() => import('@/pages/admin/AdminOperationsPages').then((m) => ({ default: m.AdminOrdersPage })));
+const AdminPaymentsPage = lazy(() => import('@/pages/admin/AdminOperationsPages').then((m) => ({ default: m.AdminPaymentsPage })));
 
 const privateRoute = (element: React.ReactNode) => <ProtectedRoute>{element}</ProtectedRoute>;
 
@@ -64,10 +59,13 @@ export const router = createBrowserRouter([
         children: [
           { index: true, element: <AdminDashboardPage /> },
           { path: 'catalogo', element: <AdminCatalogPage /> },
-          ...Object.entries(PENDING).map(([path, [title, purpose]]) => ({
-            path,
-            element: <AdminPendingPage title={title} purpose={purpose} />,
-          })),
+          { path: 'disponibilidad', element: <AdminAvailabilityPage /> },
+          { path: 'reservas', element: <AdminReservationsPage /> },
+          { path: 'pedidos', element: <AdminOrdersPage /> },
+          { path: 'pagos', element: <AdminPaymentsPage /> },
+          { path: 'clientes', element: <AdminCustomersPage key="clientes" /> },
+          { path: 'usuarios', element: <AdminCustomersPage key="usuarios" manageRoles /> },
+          { path: 'reportes', element: <AdminReportsPage /> },
         ],
       },
       { path: '*', element: <NotFoundPage /> },

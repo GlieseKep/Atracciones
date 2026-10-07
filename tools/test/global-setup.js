@@ -12,6 +12,8 @@ module.exports = async () => {
     password: 'tests',
     port,
     persistent: false,
+    // UTF-8 como en Azure; sin esto, en Windows el clúster usa WIN1252 y rechaza caracteres como '→'.
+    initdbFlags: ['--encoding=UTF8', '--locale=C'],
     onLog: () => {},
   });
   await pg.initialise();

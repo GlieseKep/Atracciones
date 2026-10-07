@@ -1,3 +1,4 @@
+import type { AdminRepository } from './admin';
 import type {
   AttractionRepository,
   AuditEventRepository,
@@ -31,6 +32,7 @@ export interface UnitOfWork {
   readonly orderEvents: OrderEventRepository;
   readonly paymentEvents: PaymentEventRepository;
   readonly auditEvents: AuditEventRepository;
+  readonly admin: AdminRepository;
 }
 
 /**

@@ -1,5 +1,6 @@
 import { ConcurrencyError, DataManagementError, type UnitOfWork, type UnitOfWorkFactory } from '@atracciones/data-management';
 import { QueryFailedError, type DataSource, type EntityManager } from 'typeorm';
+import { TypeOrmAdminRepository } from './repositories/admin.repository';
 import { TypeOrmAttractionRepository, TypeOrmAvailabilityRepository, TypeOrmReservationRepository } from './repositories/catalog.repositories';
 import {
   TypeOrmAuditEventRepository,
@@ -31,6 +32,7 @@ export class TypeOrmUnitOfWork implements UnitOfWork {
   readonly orderEvents;
   readonly paymentEvents;
   readonly auditEvents;
+  readonly admin;
 
   constructor(manager: EntityManager) {
     this.attractions = new TypeOrmAttractionRepository(manager);
@@ -47,6 +49,7 @@ export class TypeOrmUnitOfWork implements UnitOfWork {
     this.orderEvents = new TypeOrmOrderEventRepository(manager);
     this.paymentEvents = new TypeOrmPaymentEventRepository(manager);
     this.auditEvents = new TypeOrmAuditEventRepository(manager);
+    this.admin = new TypeOrmAdminRepository(manager);
   }
 }
 

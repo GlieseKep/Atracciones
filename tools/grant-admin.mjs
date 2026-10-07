@@ -1,4 +1,4 @@
-// Concede el permiso local `catalog:write` (rol `admin`) a una cuenta YA registrada en TourGirls.
+// Concede el rol `admin` (permisos locales `catalog:write` y `admin:manage`) a una cuenta YA registrada en TourGirls.
 //
 //   node tools/grant-admin.mjs <correo>
 //
@@ -30,7 +30,10 @@ try {
     [randomUUID()],
   );
   const { rows: [role] } = await client.query(`SELECT id FROM roles WHERE name = 'admin'`);
-  await client.query(`INSERT INTO role_permissions (role_id, permission) VALUES ($1, 'catalog:write') ON CONFLICT DO NOTHING`, [role.id]);
+  await client.query(
+    `INSERT INTO role_permissions (role_id, permission) VALUES ($1, 'catalog:write'), ($1, 'admin:manage') ON CONFLICT DO NOTHING`,
+    [role.id],
+  );
   for (const user of users.rows) {
     await client.query(
       `INSERT INTO user_roles (id, user_id, role_id, assigned_by_user_id, reason, assigned_at, revoked_at)
@@ -40,7 +43,7 @@ try {
     );
   }
   await client.query('COMMIT');
-  console.log(`[grant-admin] ${email} tiene el rol admin con catalog:write.`);
+  console.log(`[grant-admin] ${email} tiene el rol admin con catalog:write y admin:manage.`);
 } catch (error) {
   await client.query('ROLLBACK');
   console.error(`[grant-admin] ${error.message}`);

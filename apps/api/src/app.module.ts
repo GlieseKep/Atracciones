@@ -9,6 +9,7 @@ import type { NextFunction, Request, Response } from 'express';
 import type { DataSource } from 'typeorm';
 import { AuthGuard, Public, type AuthenticatedRequest } from './auth/auth';
 import { API_CONFIG, BUSINESS, DATA_SOURCE, type ApiConfig } from './config';
+import { AdminController } from './controllers/admin.controller';
 import { AttractionsController } from './controllers/catalog.controllers';
 import { EcommerceController, IdentityController, ReservationsController } from './controllers/operation.controllers';
 import { ProblemDetailsFilter } from './http/problems';
@@ -42,7 +43,7 @@ export class AppModule {
       module: AppModule,
       imports: [ThrottlerModule.forRoot([{ ttl: config.rateLimit.windowSeconds * 1000, limit: config.rateLimit.permitLimit }])],
       // ReservationsController antes que AttractionsController: `/atracciones/reservations` no debe capturarse como `/atracciones/:id`.
-      controllers: [HealthController, ReservationsController, AttractionsController, IdentityController, EcommerceController],
+      controllers: [HealthController, ReservationsController, AttractionsController, IdentityController, EcommerceController, AdminController],
       providers: [
         { provide: API_CONFIG, useValue: config },
         { provide: DATA_SOURCE, useValue: dataSource },
