@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { ChevronRight, Heart, LogOut, Receipt } from 'lucide-react';
+import { ChevronRight, LogOut, Receipt } from 'lucide-react';
 import { getMyCustomer, updateMyCustomer } from '@/api/customers';
 import { getOrder } from '@/api/orders';
 import { Button, ButtonLink } from '@/components/common/Button';
@@ -14,7 +14,6 @@ import { useAsync } from '@/hooks/useAsync';
 import { useAuth } from '@/hooks/useAuth';
 import { useRecentOrdersStore } from '@/stores/recentOrdersStore';
 import { useUiStore } from '@/stores/uiStore';
-import { useWishlistStore } from '@/stores/wishlistStore';
 import type { UpdateCustomerRequest } from '@/types/identity';
 import { isApiError } from '@/utils/api';
 import { formatDateTime } from '@/utils/dates';
@@ -26,7 +25,6 @@ const TABS = [
   { id: 'facturacion', label: 'Facturación' },
   { id: 'reservas', label: 'Reservas' },
   { id: 'pedidos', label: 'Pedidos y pagos' },
-  { id: 'favoritos', label: 'Favoritos' },
   { id: 'configuracion', label: 'Configuración' },
 ] as const;
 type TabId = (typeof TABS)[number]['id'];
@@ -49,7 +47,9 @@ export default function ProfilePage() {
                   onClick={() => setParams({ tab: t.id })}
                   aria-current={tab === t.id ? 'page' : undefined}
                   className={`w-full rounded-sm px-4 py-2.5 text-left text-sm font-semibold transition ${
-                    tab === t.id ? 'bg-brand-50 text-brand-600 lg:border-l-4 lg:border-brand-500' : 'hover:bg-surface'
+                    tab === t.id
+                      ? 'bg-brand-50 text-brand-600 lg:border-l-4 lg:border-brand-500'
+                      : 'hover:bg-surface'
                   }`}
                 >
                   {t.label}
@@ -71,12 +71,12 @@ export default function ProfilePage() {
           {tab === 'facturacion' && <BillingTab fallbackEmail={user?.email ?? claims?.email} />}
           {tab === 'reservas' && <ReservationHistory />}
           {tab === 'pedidos' && <OrdersTab />}
-          {tab === 'favoritos' && <FavoritesTab />}
           {tab === 'configuracion' && (
             <div className="card-surface space-y-4 p-5">
               <h2 className="text-lg">Sesión</h2>
               <p className="text-sm text-ink-soft">
-                La sesión se mantiene solo en memoria por seguridad: al cerrar o recargar la pestaña tendrás que volver a iniciar sesión.
+                La sesión se mantiene solo en memoria por seguridad: al cerrar o recargar la pestaña tendrás
+                que volver a iniciar sesión.
               </p>
               {claims && (
                 <div>
@@ -102,7 +102,10 @@ export default function ProfilePage() {
 }
 
 function BillingTab({ fallbackEmail }: { fallbackEmail?: string }) {
-  const customer = useAsync((signal) => getMyCustomer(signal).catch((e) => (isApiError(e, 'notFound') ? null : Promise.reject(e))), []);
+  const customer = useAsync(
+    (signal) => getMyCustomer(signal).catch((e) => (isApiError(e, 'notFound') ? null : Promise.reject(e))),
+    [],
+  );
   const notify = useUiStore((s) => s.notify);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<unknown>(null);
@@ -126,7 +129,13 @@ function BillingTab({ fallbackEmail }: { fallbackEmail?: string }) {
   return (
     <div className="card-surface p-5">
       <h2 className="mb-4 text-lg">Datos de facturación</h2>
-      <BillingForm customer={customer.data} fallbackEmail={fallbackEmail} submitting={saving} error={error} onSubmit={save} />
+      <BillingForm
+        customer={customer.data}
+        fallbackEmail={fallbackEmail}
+        submitting={saving}
+        error={error}
+        onSubmit={save}
+      />
     </div>
   );
 }
@@ -145,7 +154,10 @@ function OrdersTab() {
   return (
     <div className="space-y-6">
       {ids.length === 0 ? (
-        <EmptyState title="No hay pedidos recientes en este dispositivo" action={<ButtonLink to={paths.attractions()}>Explorar experiencias</ButtonLink>}>
+        <EmptyState
+          title="No hay pedidos recientes en este dispositivo"
+          action={<ButtonLink to={paths.attractions()}>Explorar experiencias</ButtonLink>}
+        >
           Los pedidos que hagas aparecerán aquí con su estado de pago.
         </EmptyState>
       ) : (
@@ -179,8 +191,14 @@ function OrderRow({ id }: { id: string }) {
   const o = order.data;
   return (
     <li>
-      <Link to={paths.order(o.id)} className="card-surface flex items-center gap-4 p-4 transition hover:shadow-card">
-        <span className="hidden h-12 w-12 shrink-0 items-center justify-center rounded-full bg-brand-100 text-brand-700 sm:flex" aria-hidden="true">
+      <Link
+        to={paths.order(o.id)}
+        className="card-surface flex items-center gap-4 p-4 transition hover:shadow-card"
+      >
+        <span
+          className="hidden h-12 w-12 shrink-0 items-center justify-center rounded-full bg-brand-100 text-brand-700 sm:flex"
+          aria-hidden="true"
+        >
           <Receipt size={22} />
         </span>
         <div className="flex-1">
@@ -199,19 +217,5 @@ function OrderRow({ id }: { id: string }) {
         <ChevronRight size={18} className="text-ink-muted" aria-hidden="true" />
       </Link>
     </li>
-  );
-}
-
-function FavoritesTab() {
-  const count = useWishlistStore((s) => s.ids.length);
-  return (
-    <div className="card-surface flex items-center justify-between gap-4 p-5">
-      <p className="flex items-center gap-2">
-        <Heart size={20} className="text-brand-500" aria-hidden="true" /> Tienes {count} {count === 1 ? 'experiencia guardada' : 'experiencias guardadas'}.
-      </p>
-      <ButtonLink to={paths.wishlist()} variant="secondary">
-        Ver lista de deseos
-      </ButtonLink>
-    </div>
   );
 }

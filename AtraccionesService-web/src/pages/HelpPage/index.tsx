@@ -21,7 +21,7 @@ const SECTIONS = [
   {
     id: 'privacidad',
     title: 'Privacidad y cookies',
-    text: 'Tu contraseña se guarda cifrada (scrypt) y nunca se comparte. Tu sesión se mantiene solo en memoria: al recargar o cerrar la pestaña tendrás que volver a iniciar sesión. En este navegador guardamos únicamente tu lista de deseos, tus pedidos recientes y preferencias de vista.',
+    text: 'Tu contraseña se guarda cifrada (scrypt) y nunca se comparte. Tu sesión se mantiene solo en memoria: al recargar o cerrar la pestaña tendrás que volver a iniciar sesión. En este navegador guardamos únicamente tus pedidos recientes y preferencias de vista.',
   },
   {
     id: 'nosotros',

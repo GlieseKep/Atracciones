@@ -5,7 +5,6 @@ import { AttractionCard } from '@/components/attractions/AttractionCard';
 import { AttractionDetails } from '@/components/attractions/AttractionDetails';
 import { AttractionGallery } from '@/components/attractions/AttractionGallery';
 import { BookingCard } from '@/components/attractions/BookingCard';
-import { WishlistButton } from '@/components/attractions/WishlistButton';
 import { Badge, badgeTone } from '@/components/common/Badge';
 import { Button } from '@/components/common/Button';
 import { ErrorState } from '@/components/common/Feedback';
@@ -105,7 +104,6 @@ export default function AttractionDetailPage() {
             <Button variant="tertiary" size="sm" onClick={share}>
               <Share2 size={16} aria-hidden="true" /> Compartir
             </Button>
-            <WishlistButton id={a.id} name={a.name} className="border border-line shadow-none" />
           </div>
         </div>
 
@@ -124,7 +122,8 @@ export default function AttractionDetailPage() {
                   <div>
                     <Rating score={a.ratings.score} size={20} />
                     <p className="mt-1 text-sm text-ink-soft">
-                      Basado en {formatReviewCount(a.ratings.numberOfReviews)} opiniones de viajeros verificados.
+                      Basado en {formatReviewCount(a.ratings.numberOfReviews)} opiniones de viajeros
+                      verificados.
                     </p>
                   </div>
                 </div>

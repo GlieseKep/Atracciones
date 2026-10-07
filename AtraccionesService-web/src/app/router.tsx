@@ -15,7 +15,6 @@ const ReservationDetailPage = lazy(() => import('@/pages/ReservationDetailPage')
 const PurchasePage = lazy(() => import('@/pages/PurchasePage'));
 const OrderPage = lazy(() => import('@/pages/OrderPage'));
 const ProfilePage = lazy(() => import('@/pages/ProfilePage'));
-const WishlistPage = lazy(() => import('@/pages/WishlistPage'));
 const HelpPage = lazy(() => import('@/pages/HelpPage'));
 const LoginPage = lazy(() => import('@/pages/AuthPages').then((m) => ({ default: m.LoginPage })));
 const RegisterPage = lazy(() => import('@/pages/AuthPages').then((m) => ({ default: m.RegisterPage })));
@@ -41,7 +40,6 @@ export const router = createBrowserRouter([
       { path: ROUTES.attractions, element: <AttractionsPage /> },
       { path: ROUTES.attractionDetail, element: <AttractionDetailPage /> },
       { path: ROUTES.search, element: <SearchPage /> },
-      { path: ROUTES.wishlist, element: <WishlistPage /> },
       { path: ROUTES.help, element: <HelpPage /> },
       { path: ROUTES.login, element: <LoginPage /> },
       { path: ROUTES.register, element: <RegisterPage /> },

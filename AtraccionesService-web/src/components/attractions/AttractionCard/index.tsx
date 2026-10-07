@@ -6,10 +6,10 @@ import { Rating } from '@/components/common/Rating';
 import type { Attraction } from '@/types/attraction';
 import { formatDuration, formatPrice } from '@/utils/formatters';
 import { paths } from '@/utils/routes';
-import { WishlistButton } from '../WishlistButton';
 
 /** Variante más ligera de una foto de Wikimedia (las de otros orígenes se usan tal cual). */
-export const photoAt = (url: string, width: 330 | 500 | 960 | 1280) => url.replace(/\/1280px-/, `/${width}px-`);
+export const photoAt = (url: string, width: 330 | 500 | 960 | 1280) =>
+  url.replace(/\/1280px-/, `/${width}px-`);
 
 interface Props {
   attraction: Attraction;
@@ -28,14 +28,15 @@ export function AttractionCard({ attraction: a, layout = 'grid' }: Props) {
         isList ? 'flex-col border border-line hover:shadow-raised sm:flex-row' : 'flex-col'
       }`}
     >
-      <div className={`relative shrink-0 overflow-hidden ${isList ? 'aspect-[4/3] sm:aspect-auto sm:w-[280px]' : 'aspect-[4/3] rounded-md'}`}>
+      <div
+        className={`relative shrink-0 overflow-hidden ${isList ? 'aspect-[4/3] sm:aspect-auto sm:w-[280px]' : 'aspect-[4/3] rounded-md'}`}
+      >
         <CardImage src={photo} alt={a.name} />
         {a.badges[0] && (
           <Badge tone={badgeTone(a.badges[0])} className="absolute left-3 top-3">
             {a.badges[0]}
           </Badge>
         )}
-        <WishlistButton id={a.id} name={a.name} className="absolute right-3 top-3 z-10" />
       </div>
 
       <div className={`flex flex-1 flex-col ${isList ? 'p-4 sm:p-5' : 'pt-3'}`}>
@@ -90,8 +91,13 @@ function CardImage({ src, alt }: { src?: string; alt: string }) {
 
 export function AttractionCardSkeleton({ layout = 'grid' }: { layout?: 'grid' | 'list' }) {
   return (
-    <div aria-hidden="true" className={layout === 'list' ? 'flex gap-4 rounded-md border border-line p-3' : ''}>
-      <div className={`skeleton ${layout === 'list' ? 'h-40 w-48 shrink-0' : 'aspect-[4/3] w-full rounded-md'}`} />
+    <div
+      aria-hidden="true"
+      className={layout === 'list' ? 'flex gap-4 rounded-md border border-line p-3' : ''}
+    >
+      <div
+        className={`skeleton ${layout === 'list' ? 'h-40 w-48 shrink-0' : 'aspect-[4/3] w-full rounded-md'}`}
+      />
       <div className="mt-3 flex-1 space-y-2">
         <div className="skeleton h-3 w-1/3" />
         <div className="skeleton h-4 w-full" />

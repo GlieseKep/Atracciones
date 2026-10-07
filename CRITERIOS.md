@@ -80,10 +80,9 @@ rúbrica: el outbox, Service Bus y los webhooks no están implementados en el c�
 **Consulta:**
 - inicio, listado y búsqueda por destino, fechas y valoración, con filtros y orden;
 - detalle de la atracción con fotos, operador, incluidos e idiomas;
-- disponibilidad por franja;
-- favoritos.
+- disponibilidad por franja.
 
-Páginas: `HomePage`, `AttractionsPage`, `SearchPage`, `AttractionDetailPage`, `WishlistPage`.
+Páginas: `HomePage`, `AttractionsPage`, `SearchPage`, `AttractionDetailPage`.
 
 **Publicación:** el catálogo se publica desde el panel (criterio 2). Lo publicado aparece en el marketplace con el mismo
 identificador.

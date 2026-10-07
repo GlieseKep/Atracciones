@@ -43,7 +43,7 @@ src/
   features/     auth (sesión, rutas protegidas), attractions (filtros, catálogo), content
   hooks/        useAuth, useAttractions, useReservations, usePurchase, usePagination, useAsync
   pages/        una carpeta por página; AuthPages (login/registro); admin/ agrupa el área administrativa
-  stores/       Zustand: auth, compra, UI, favoritos, pedidos recientes
+  stores/       Zustand: auth, compra, UI, pedidos recientes
   styles/       tokens, globales y componentes
   utils/        formato, fechas, validación (zod), errores, idempotencia
 ```

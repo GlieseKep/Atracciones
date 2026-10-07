@@ -1,10 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
-import { CalendarCheck, ChevronDown, Globe, Heart, LayoutDashboard, LogOut, Menu, User } from 'lucide-react';
+import { CalendarCheck, ChevronDown, Globe, LayoutDashboard, LogOut, Menu, User } from 'lucide-react';
 import { SearchBar } from '@/components/search/SearchBar';
 import { useAuth } from '@/hooks/useAuth';
 import { useUiStore } from '@/stores/uiStore';
-import { useWishlistStore } from '@/stores/wishlistStore';
 import { paths } from '@/utils/routes';
 import { Logo } from '../Logo';
 import { MobileMenu } from '../MobileMenu';
@@ -18,13 +17,12 @@ export const NAV_LINKS = [
 ];
 
 /**
- * Cabecera tipo Viator: logo, buscador central, accesos con icono + texto (lista de deseos, reservas, perfil)
+ * Cabecera tipo Viator: logo, buscador central, accesos con icono + texto (reservas, perfil)
  * y una segunda fila con la navegación principal. Una sesión de administración solo ve el acceso al panel:
  * no necesita la navegación de compra.
  */
 export function Navbar() {
   const { isAuthenticated, displayName, signIn, signUp, signOut, canManageCatalog, status } = useAuth();
-  const wishlistCount = useWishlistStore((s) => s.ids.length);
   const setMobileMenu = useUiStore((s) => s.setMobileMenu);
   const location = useLocation();
   const isAdmin = isAuthenticated && canManageCatalog;
@@ -48,18 +46,11 @@ export function Navbar() {
           <span className="hidden items-center gap-1.5 rounded-full px-3 py-2 text-sm font-semibold text-ink lg:inline-flex">
             <Globe size={18} aria-hidden="true" /> ES · US$
           </span>
-          {isAdmin ? (
+          {isAdmin && (
             <HeaderLink
               to={paths.admin()}
               icon={<LayoutDashboard size={20} aria-hidden="true" />}
               label="Panel"
-            />
-          ) : (
-            <HeaderLink
-              to={paths.wishlist()}
-              icon={<Heart size={20} aria-hidden="true" />}
-              label="Lista de deseos"
-              badge={wishlistCount}
             />
           )}
           {isAuthenticated && !isAdmin && (
@@ -134,17 +125,7 @@ export function Navbar() {
   );
 }
 
-function HeaderLink({
-  to,
-  icon,
-  label,
-  badge,
-}: {
-  to: string;
-  icon: React.ReactNode;
-  label: string;
-  badge?: number;
-}) {
+function HeaderLink({ to, icon, label }: { to: string; icon: React.ReactNode; label: string }) {
   return (
     <Link
       to={to}
@@ -152,12 +133,6 @@ function HeaderLink({
     >
       {icon}
       {label}
-      {!!badge && (
-        <span className="absolute right-3 top-0 min-w-[18px] rounded-full bg-brand-500 px-1 text-center text-[11px] leading-[18px] text-white">
-          {badge}
-          <span className="sr-only"> guardadas</span>
-        </span>
-      )}
     </Link>
   );
 }
@@ -223,9 +198,6 @@ function AccountMenu({
               </Link>
               <Link role="menuitem" to={paths.profile('reservas')} className={item}>
                 <CalendarCheck size={18} aria-hidden="true" /> Reservas y pedidos
-              </Link>
-              <Link role="menuitem" to={paths.wishlist()} className={item}>
-                <Heart size={18} aria-hidden="true" /> Lista de deseos
               </Link>
             </>
           )}

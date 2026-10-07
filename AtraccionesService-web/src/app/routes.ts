@@ -9,7 +9,6 @@ export const ROUTES = {
   reservation: '/reservas/:reservationId',
   order: '/pedidos/:orderId',
   profile: '/perfil',
-  wishlist: '/favoritos',
   help: '/ayuda',
   login: '/login',
   register: '/registro',

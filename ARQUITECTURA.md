@@ -143,7 +143,7 @@ AtraccionesService-web/src/
   hooks/        useAuth, useAsync, useIdempotentMutation, usePagination…
   pages/        marketplace (Home, Attractions, Search, Detail, Reservation, Purchase, Order, Profile…)
                 admin/ (Dashboard, Catálogo, Disponibilidad, Reservas, Pedidos, Pagos, Clientes, Usuarios, Reportes)
-  stores/       Zustand: autenticación, compra, UI, favoritos
+  stores/       Zustand: autenticación, compra, UI
   utils/        formatos, fechas, validación (zod), errores
 ```
 

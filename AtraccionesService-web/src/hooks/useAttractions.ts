@@ -22,7 +22,7 @@ export function useAttractions(filters: CatalogFilters) {
   return { ...catalog, page, facets: options, source: resolveCatalogSource() };
 }
 
-/** Todas las atracciones (secciones del Home, relacionadas y lista de deseos). */
+/** Todas las atracciones (secciones del Home y relacionadas). */
 export function useAllAttractions() {
   const status = useAuthStore((s) => s.status);
   return useAsync((signal) => fetchCatalog(DEFAULT_FILTERS, signal), [status]);

@@ -9,7 +9,6 @@ import { Navbar } from '@/components/layout/Navbar';
 import { DEMO_ATTRACTIONS } from '@/features/attractions/demoCatalog';
 import { ProtectedRoute } from '@/features/auth/ProtectedRoute';
 import { useAuthStore } from '@/stores/authStore';
-import { useWishlistStore } from '@/stores/wishlistStore';
 import { today } from '@/utils/dates';
 
 function LocationProbe() {
@@ -35,7 +34,6 @@ vi.mock('@/api/availability', () => ({
 
 beforeEach(() => {
   useAuthStore.getState().clear();
-  useWishlistStore.setState({ ids: [] });
 });
 
 describe('AttractionCard', () => {
@@ -45,23 +43,15 @@ describe('AttractionCard', () => {
         <AttractionCard attraction={teleferico} />
       </MemoryRouter>,
     );
-    expect(screen.getByRole('link', { name: teleferico.name })).toHaveAttribute('href', `/atracciones/${teleferico.id}`);
+    expect(screen.getByRole('link', { name: teleferico.name })).toHaveAttribute(
+      'href',
+      `/atracciones/${teleferico.id}`,
+    );
     expect(screen.getByRole('img', { name: /Valoración 4,6 de 5/ })).toBeInTheDocument();
     expect(screen.getByText('2 h')).toBeInTheDocument();
     expect(screen.getByText('Cancelación gratuita')).toBeInTheDocument();
     expect(screen.getByText('US$ 9,50')).toBeInTheDocument();
     expect(screen.getByText('Más vendido')).toBeInTheDocument();
-  });
-
-  it('guarda la atracción en la lista de deseos', async () => {
-    render(
-      <MemoryRouter>
-        <AttractionCard attraction={teleferico} />
-      </MemoryRouter>,
-    );
-    await userEvent.click(screen.getByRole('button', { name: /Guardar .* lista de deseos/ }));
-    expect(useWishlistStore.getState().ids).toContain(teleferico.id);
-    expect(screen.getByRole('button', { name: /Quitar .* lista de deseos/ })).toHaveAttribute('aria-pressed', 'true');
   });
 });
 
@@ -94,14 +84,24 @@ describe('SearchBar', () => {
 describe('AvailabilitySelector', () => {
   it('lista franjas y deshabilita las que no tienen plazas suficientes', async () => {
     const onChange = vi.fn();
-    render(<AvailabilitySelector attractionId={teleferico.id} date={today()} quantity={100} value="" onChange={onChange} />);
+    render(
+      <AvailabilitySelector
+        attractionId={teleferico.id}
+        date={today()}
+        quantity={100}
+        value=""
+        onChange={onChange}
+      />,
+    );
     const radios = await screen.findAllByRole('radio');
     expect(radios).toHaveLength(2);
     radios.forEach((r) => expect(r).toBeDisabled());
   });
 
   it('pide fecha antes de mostrar horarios', () => {
-    render(<AvailabilitySelector attractionId={teleferico.id} date="" quantity={1} value="" onChange={vi.fn()} />);
+    render(
+      <AvailabilitySelector attractionId={teleferico.id} date="" quantity={1} value="" onChange={vi.fn()} />,
+    );
     expect(screen.getByText('Elige una fecha para ver los horarios.')).toBeInTheDocument();
   });
 });
@@ -116,14 +116,18 @@ describe('Navbar', () => {
     expect(screen.getByRole('button', { name: /Iniciar sesión/ })).toBeInTheDocument();
     unmount();
 
-    useAuthStore.getState().setSession('t', Date.now() + 60_000, { sub: 'u', name: 'Ana', scopes: [], roles: [] });
+    useAuthStore
+      .getState()
+      .setSession('t', Date.now() + 60_000, { sub: 'u', name: 'Ana', scopes: [], roles: [] });
     render(
       <MemoryRouter>
         <Navbar />
       </MemoryRouter>,
     );
     expect(screen.getByRole('button', { name: /Ana/ })).toBeInTheDocument();
-    expect(within(screen.getByRole('navigation', { name: 'Principal' })).getByText('Mis reservas')).toBeInTheDocument();
+    expect(
+      within(screen.getByRole('navigation', { name: 'Principal' })).getByText('Mis reservas'),
+    ).toBeInTheDocument();
   });
 });
 
@@ -148,17 +152,23 @@ describe('ProtectedRoute', () => {
   it('redirige al inicio de sesión conservando la ruta de regreso', () => {
     renderAt('/perfil?tab=reservas');
     expect(screen.queryByText('Contenido privado')).not.toBeInTheDocument();
-    expect(screen.getByTestId('location')).toHaveTextContent(`/login?returnTo=${encodeURIComponent('/perfil?tab=reservas')}`);
+    expect(screen.getByTestId('location')).toHaveTextContent(
+      `/login?returnTo=${encodeURIComponent('/perfil?tab=reservas')}`,
+    );
   });
 
   it('muestra el contenido con sesión válida', () => {
-    useAuthStore.getState().setSession('t', Date.now() + 60_000, { sub: 'u', scopes: ['attractions:read'], roles: [] });
+    useAuthStore
+      .getState()
+      .setSession('t', Date.now() + 60_000, { sub: 'u', scopes: ['attractions:read'], roles: [] });
     renderAt('/perfil');
     expect(screen.getByText('Contenido privado')).toBeInTheDocument();
   });
 
   it('deniega rutas administrativas sin el scope requerido', () => {
-    useAuthStore.getState().setSession('t', Date.now() + 60_000, { sub: 'u', scopes: ['attractions:read'], roles: [] });
+    useAuthStore
+      .getState()
+      .setSession('t', Date.now() + 60_000, { sub: 'u', scopes: ['attractions:read'], roles: [] });
     renderAt('/perfil', 'attractions:write');
     expect(screen.queryByText('Contenido privado')).not.toBeInTheDocument();
     expect(screen.getByText('No tienes permiso para ver esta sección')).toBeInTheDocument();

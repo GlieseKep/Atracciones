@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { CalendarCheck, Heart, LayoutDashboard, LogIn, LogOut, User, UserPlus, X } from 'lucide-react';
+import { CalendarCheck, LayoutDashboard, LogIn, LogOut, User, UserPlus, X } from 'lucide-react';
 import { SearchBar } from '@/components/search/SearchBar';
 import { useAuth } from '@/hooks/useAuth';
 import { useUiStore } from '@/stores/uiStore';
@@ -71,9 +71,6 @@ export function MobileMenu() {
                   </Link>
                 ))}
                 <hr className="my-3 border-line" />
-                <Link to={paths.wishlist()} className={row}>
-                  <Heart size={20} aria-hidden="true" /> Lista de deseos
-                </Link>
                 {isAuthenticated ? (
                   <>
                     <Link to={paths.profile('reservas')} className={row}>

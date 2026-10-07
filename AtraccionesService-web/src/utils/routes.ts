@@ -12,7 +12,6 @@ export const paths = {
   reservation: (id: string) => `/reservas/${id}`,
   order: (id: string) => `/pedidos/${id}`,
   profile: (tab?: string) => (tab ? `/perfil?tab=${tab}` : '/perfil'),
-  wishlist: () => '/favoritos',
   admin: () => '/admin',
   login: (returnTo?: string) => withQuery('/login', returnTo && returnTo !== '/' ? new URLSearchParams({ returnTo }) : undefined),
   register: (returnTo?: string) => withQuery('/registro', returnTo && returnTo !== '/' ? new URLSearchParams({ returnTo }) : undefined),
