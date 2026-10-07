@@ -1,0 +1,23 @@
+<Solution>
+  <Folder Name="/AtraccionesService/">
+    <Project Path="AtraccionesService.API.Tests/AtraccionesService.API.Tests.csproj" />
+    <Project Path="AtraccionesService.API/AtraccionesService.API.csproj" />
+    <Project Path="AtraccionesService.Application.Tests/AtraccionesService.Application.Tests.csproj" />
+    <Project Path="AtraccionesService.Bussiness/AtraccionesService.Application.csproj" />
+    <Project Path="AtraccionesService.Contracts/AtraccionesService.Contracts.csproj" />
+    <Project Path="AtraccionesService.DataAcess.Tests/AtraccionesService.DataAcess.Tests.csproj" />
+    <Project Path="AtraccionesService.DataAcess/AtraccionesService.DataAcess.csproj" />
+    <Project Path="AtraccionesService.DataManagment.Tests/AtraccionesService.DataManagment.Tests.csproj" />
+    <Project Path="AtraccionesService.DataManagment/AtraccionesService.DataManagment.csproj" />
+    <Project Path="AtraccionesService.Domain/AtraccionesService.Domain.csproj" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/Atracciones.Api/Atracciones.Api.csproj" />
+    <Project Path="src/Atracciones.Application/Atracciones.Application.csproj" />
+    <Project Path="src/Atracciones.Domain/Atracciones.Domain.csproj" />
+    <Project Path="src/Atracciones.Infrastructure/Atracciones.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Atracciones.Tests/Atracciones.Tests.csproj" />
+  </Folder>
+</Solution>

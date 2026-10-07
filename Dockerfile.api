@@ -1,0 +1,28 @@
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+WORKDIR /src
+
+# Copy project files for caching restore layer
+COPY AtraccionesService.API/AtraccionesService.API.csproj AtraccionesService.API/
+COPY AtraccionesService.Bussiness/AtraccionesService.Application.csproj AtraccionesService.Bussiness/
+COPY AtraccionesService.Contracts/AtraccionesService.Contracts.csproj AtraccionesService.Contracts/
+COPY AtraccionesService.Domain/AtraccionesService.Domain.csproj AtraccionesService.Domain/
+COPY AtraccionesService.DataManagment/AtraccionesService.DataManagment.csproj AtraccionesService.DataManagment/
+COPY AtraccionesService.DataAcess/AtraccionesService.DataAcess.csproj AtraccionesService.DataAcess/
+
+RUN dotnet restore AtraccionesService.API/AtraccionesService.API.csproj
+
+# Copy everything else and build
+COPY . .
+WORKDIR /src/AtraccionesService.API
+RUN dotnet publish AtraccionesService.API.csproj -c Release -o /app/publish --no-restore /p:UseAppHost=false
+
+# Runtime stage
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
+WORKDIR /app
+COPY --from=build /app/publish .
+
+ENV ASPNETCORE_URLS=http://+:5200
+ENV ASPNETCORE_ENVIRONMENT=Development
+EXPOSE 5200
+
+ENTRYPOINT ["dotnet", "AtraccionesService.API.dll"]
