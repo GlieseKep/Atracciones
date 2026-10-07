@@ -75,4 +75,15 @@ Las migraciones se aplican solas al arrancar el API (`DB_MIGRATIONS_RUN=true`).
 
 ## Despliegue
 
-Guía paso a paso para Azure (App Service + Azure Database for PostgreSQL + Static Web Apps): [AZURE_DEPLOY.md](AZURE_DEPLOY.md).
+El sistema está publicado en Azure y se despliega solo con cada push a `main` (workflows en `.github/workflows/`):
+
+| Servicio | URL |
+|---|---|
+| Frontend | https://red-pebble-08e84d70f.1.azurestaticapps.net |
+| Swagger del API | https://tourgirls-api-mms-hagtfccfdddceheu.westus2-01.azurewebsites.net/docs |
+| Salud del API | https://tourgirls-api-mms-hagtfccfdddceheu.westus2-01.azurewebsites.net/health |
+
+La URL base del API es `https://tourgirls-api-mms-hagtfccfdddceheu.westus2-01.azurewebsites.net/api/v1`: es solo el
+prefijo de los endpoints (no tiene página propia) y todos exigen un token; para probarlos, usa Swagger.
+
+Guía paso a paso para Azure (App Service + Azure Database for PostgreSQL + Static Web Apps): [DESPLIEGUE_AZURE.md](DESPLIEGUE_AZURE.md).
