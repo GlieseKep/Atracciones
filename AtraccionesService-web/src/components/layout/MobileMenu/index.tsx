@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { CalendarCheck, Heart, LayoutDashboard, LogIn, LogOut, User, X } from 'lucide-react';
+import { CalendarCheck, Heart, LayoutDashboard, LogIn, LogOut, User, UserPlus, X } from 'lucide-react';
 import { SearchBar } from '@/components/search/SearchBar';
 import { useAuth } from '@/hooks/useAuth';
 import { useUiStore } from '@/stores/uiStore';
@@ -12,7 +12,7 @@ import { Logo } from '../Logo';
 export function MobileMenu() {
   const open = useUiStore((s) => s.mobileMenuOpen);
   const setOpen = useUiStore((s) => s.setMobileMenu);
-  const { isAuthenticated, signIn, signOut, displayName, canManageCatalog } = useAuth();
+  const { isAuthenticated, signIn, signUp, signOut, displayName, canManageCatalog } = useAuth();
   const location = useLocation();
 
   useEffect(() => setOpen(false), [location.pathname, location.hash, setOpen]);
@@ -70,9 +70,14 @@ export function MobileMenu() {
                 </button>
               </>
             ) : (
-              <button type="button" onClick={() => signIn()} className={`${row} text-left text-brand-500`}>
-                <LogIn size={20} aria-hidden="true" /> Iniciar sesión
-              </button>
+              <>
+                <button type="button" onClick={() => signIn()} className={`${row} text-left text-brand-500`}>
+                  <LogIn size={20} aria-hidden="true" /> Iniciar sesión
+                </button>
+                <button type="button" onClick={() => signUp()} className={`${row} text-left`}>
+                  <UserPlus size={20} aria-hidden="true" /> Crear cuenta
+                </button>
+              </>
             )}
           </nav>
         </div>

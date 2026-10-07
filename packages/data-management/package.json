@@ -1,0 +1,11 @@
+{
+  "name": "@atracciones/data-management",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Contratos de persistencia: repositorios, unidad de trabajo, paginación y especificaciones. Sin implementación.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "dependencies": {
+    "@atracciones/domain": "1.0.0"
+  }
+}

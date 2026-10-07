@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { PurchaseResponse } from '@/types/purchase';
-import { claimsFrom } from '@/features/auth/oauth';
+import { claimsFrom } from '@/features/auth/session';
 import { currentAccessToken, useAuthStore } from './authStore';
 import { usePurchaseStore } from './purchaseStore';
 

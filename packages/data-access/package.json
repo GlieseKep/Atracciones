@@ -1,0 +1,15 @@
+{
+  "name": "@atracciones/data-access",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Implementación PostgreSQL (TypeORM) de los contratos de persistencia, migraciones y datos iniciales.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "dependencies": {
+    "@atracciones/data-management": "1.0.0",
+    "@atracciones/domain": "1.0.0",
+    "pg": "^8.16.0",
+    "reflect-metadata": "^0.2.2",
+    "typeorm": "0.3.31"
+  }
+}

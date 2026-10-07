@@ -1,0 +1,8 @@
+{
+  "name": "@atracciones/domain",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Modelo de dominio: agregados, invariantes y transiciones de estado. Sin dependencias de infraestructura.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts"
+}

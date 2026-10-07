@@ -14,6 +14,8 @@ export const paths = {
   profile: (tab?: string) => (tab ? `/perfil?tab=${tab}` : '/perfil'),
   wishlist: () => '/favoritos',
   admin: () => '/admin',
+  login: (returnTo?: string) => withQuery('/login', returnTo && returnTo !== '/' ? new URLSearchParams({ returnTo }) : undefined),
+  register: (returnTo?: string) => withQuery('/registro', returnTo && returnTo !== '/' ? new URLSearchParams({ returnTo }) : undefined),
 };
 
 function withQuery(path: string, query?: URLSearchParams) {
@@ -21,7 +23,7 @@ function withQuery(path: string, query?: URLSearchParams) {
   return qs ? `${path}?${qs}` : path;
 }
 
-/** Solo permite volver a rutas internas (evita redirecciones abiertas tras el callback OAuth2). */
+/** Solo permite volver a rutas internas (evita redirecciones abiertas tras iniciar sesión). */
 export function safeReturnPath(value: string | null | undefined): string {
   if (!value || !value.startsWith('/') || value.startsWith('//') || value.startsWith('/\\')) return '/';
   return value;

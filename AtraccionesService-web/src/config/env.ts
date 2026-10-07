@@ -1,4 +1,4 @@
-/** Configuración pública del frontend. Nunca contiene secretos: el cliente OAuth2 es público (PKCE). */
+/** Configuración pública del frontend (se fija al compilar). Nunca contiene secretos. */
 
 export type CatalogSource = 'auto' | 'api' | 'demo';
 
@@ -12,19 +12,14 @@ function catalogSource(): CatalogSource {
   return value === 'api' || value === 'demo' ? value : 'auto';
 }
 
+const origin = (value: string) => value.replace(/\/+$/, '');
+
 export const env = {
-  apiBaseUrl: read('VITE_API_BASE_URL', 'http://localhost:5276/api/v1').replace(/\/$/, ''),
+  /** URL del API sin el prefijo; el cliente añade `/api/v1`. */
+  apiBaseUrl: `${origin(read('VITE_API_URL', 'http://localhost:5276'))}/api/v1`,
+  /** Servicio de autenticación (registro e inicio de sesión). */
+  authUrl: origin(read('VITE_AUTH_URL', 'http://localhost:5280')),
   catalogSource: catalogSource(),
-  oauth: {
-    authorizationUrl: read('VITE_OAUTH_AUTHORIZATION_URL'),
-    tokenUrl: read('VITE_OAUTH_TOKEN_URL'),
-    logoutUrl: read('VITE_OAUTH_LOGOUT_URL'),
-    clientId: read('VITE_OAUTH_CLIENT_ID'),
-    audience: read('VITE_OAUTH_AUDIENCE'),
-    redirectUri: read('VITE_OAUTH_REDIRECT_URI', `${window.location.origin}/auth/callback`),
-    scopes: read('VITE_OAUTH_SCOPES', 'openid profile email attractions:read attractions:book attractions:cancel'),
-  },
 } as const;
 
-export const isOAuthConfigured = () =>
-  env.oauth.authorizationUrl !== '' && env.oauth.tokenUrl !== '' && env.oauth.clientId !== '';
+export const isAuthConfigured = () => env.authUrl !== '';

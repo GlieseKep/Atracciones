@@ -45,7 +45,7 @@ export const AUDIENCES = [
 export const WHY_US = [
   { title: 'Disponibilidad garantizada', text: 'Consultamos los cupos en tiempo real antes de confirmar cada reserva.' },
   { title: 'Recomendaciones locales', text: 'Experiencias elegidas por guías y operadores de cada región.' },
-  { title: 'Reservas seguras', text: 'Inicio de sesión OAuth2 y pagos simulados sin datos de tarjeta.' },
+  { title: 'Reservas seguras', text: 'Cuentas protegidas con contraseña cifrada y pagos simulados sin datos de tarjeta.' },
   { title: 'Experiencias verificadas', text: 'Opiniones de viajeros y operadores identificados en cada ficha.' },
 ];
 
@@ -110,7 +110,7 @@ export const FAQ = [
   },
   {
     q: '¿Necesito iniciar sesión para reservar?',
-    a: 'Puedes explorar sin cuenta. Para reservar o comprar te pediremos iniciar sesión con nuestro proveedor de identidad OAuth2; nunca guardamos tu contraseña.',
+    a: 'Puedes explorar sin cuenta. Para reservar o comprar necesitas una cuenta gratuita: créala en un minuto con tu correo y una contraseña.',
   },
   {
     q: '¿Qué diferencia hay entre reservar y comprar?',

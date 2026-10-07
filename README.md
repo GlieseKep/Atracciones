@@ -1,111 +1,78 @@
-# AEROCACHE Airlines - Microservicio REST de Vuelos y Portal Web
+# TourGirls · Atracciones de Ecuador
 
-Sistema integral de microservicio centralizado para búsqueda, ofertas, bloqueo de cupos (hold), reservas, emisión de tickets y postventa de vuelos domésticos en Ecuador (**Quito UIO, Guayaquil GYE y Cuenca CUE**). 
+Portal para descubrir y reservar tours, entradas y experiencias en Ecuador: catálogo con búsqueda y disponibilidad por
+franja, reservas, compra directa con pedidos y pagos simulados, y administración del catálogo.
 
-Implementa al 100% el contrato estricto OpenAPI [`vuelos-openapi.yaml`](file:///C:/Users/default.LAPTOP-N0CGE918/Downloads/vuelos-openapi.yaml) con arquitectura en capas para **Visual Studio 2022 (.NET 9)**, interfaz web inspirada en **LATAM Airlines** y despliegue automatizado con **Docker y Docker Compose**.
+| Parte | Tecnología | Carpeta |
+|---|---|---|
+| API REST (`/api/v1`) | NestJS 11 + TypeORM + PostgreSQL | `apps/api` |
+| Autenticación (registro / login) | NestJS + PostgreSQL, JWT HS256 | `apps/auth` |
+| Frontend | React 19 + Vite + Tailwind | `AtraccionesService-web` |
 
----
+## Arquitectura
 
-## 🛫 Red Aérea Exclusiva (Ecuador Doméstico)
-- **Quito (UIO)** - Aeropuerto Internacional Mariscal Sucre
-- **Guayaquil (GYE)** - Aeropuerto Internacional José Joaquín de Olmedo
-- **Cuenca (CUE)** - Aeropuerto Mariscal La Mar
-
-Flota operada: **Airbus A320-200** con tarifas **Light, Plus y Top**.
-
----
-
-## 🏛 Arquitectura de la Solución (Visual Studio 2022)
+Monorepo con npm workspaces y una capa por paquete (`PLAN_IMPLEMENTACION_*.md`):
 
 ```
-Aerocache/
-├── Aerocache.sln                         # Solución compatible con Visual Studio 2022
-├── Aerocache.slnx                        # Formato moderno de solución VS 2022 v17.10+
-├── docker-compose.yml                    # Orquestador Docker multi-contenedor
-├── Dockerfile.api                        # Imagen Docker del microservicio .NET 9
-│
-├── Aerocache.API/                        # Web API REST (Solo REST)
-│   ├── Controllers/                      # Search, Offers, Bookings, PostSale, CheckIn, Flights, Webhooks
-│   ├── Middleware/                       # RFC 7807 ProblemDetailsExceptionMiddleware
-│   └── Program.cs                        # Configuración CORS, Swagger y Semillado automático
-│
-├── Aerocache.Business/                   # Lógica de Negocio y Reglas
-│   ├── DTOs/                             # Modelos estrictos según vuelos-openapi.yaml
-│   ├── Exceptions/                       # Jerarquía de excepciones de negocio
-│   └── Services/                         # Servicios de Búsqueda, Hold, Emisión, Postventa, Check-in
-│
-├── Aerocache.DataAccess/                 # Acceso a Datos y Persistencia
-│   ├── Context/                          # AerocacheDbContext (SQLite portable aerocache.db)
-│   ├── Entities/                         # Flight, CabinFare, Seat, Hold, Booking, Passenger, Ticket
-│   └── Seed/                             # AerocacheDataSeeder (Vuelos diarios UIO, GYE, CUE)
-│
-├── Aerocache.DataManagement/             # Patrón Repositorio y Unit of Work
-│   ├── Interfaces/                       # IGenericRepository, IUnitOfWork
-│   └── Repositories/                     # GenericRepository, UnitOfWork
-│
-└── aerocache-web/                        # Portal Web Visual (Inspirado en LATAM Airlines)
-    ├── Dockerfile                        # Imagen de frontend con servidor Nginx
-    ├── nginx.conf                        # Reverse proxy hacia la API
-    └── src/
-        ├── components/                   # Navbar, Buscador, Tarjetas de Vuelo, Asientos, Pases de Abordar
-        └── pages/                        # Comprar Vuelos, Mis Viajes (Postventa), Estado de Vuelo
+packages/
+  domain/           Agregados, invariantes y transiciones de estado (sin dependencias)
+  data-management/  Contratos de persistencia: repositorios, unidad de trabajo, paginación
+  business/         Casos de uso: validación, idempotencia, transacciones, reloj de negocio
+  data-access/      PostgreSQL con TypeORM: entidades, repositorios, migraciones, catálogo inicial
+  contracts/        DTOs HTTP validados (class-validator) y documentados (OpenAPI)
+apps/
+  api/              NestJS: rutas, scopes, permisos locales, errores RFC 7807, rate limit, Swagger
+  auth/             dev-auth: cuentas con contraseña (scrypt) que emiten el JWT del API
+AtraccionesService-web/   Portal web
+tools/              PostgreSQL local embebido, alta de administradores, soporte de pruebas
 ```
 
----
+Garantías principales:
 
-## 🚀 Cómo Ejecutar el Proyecto
+- **Idempotencia** en todas las mutaciones (`Idempotency-Key`): repetir devuelve la misma respuesta sin duplicar efectos.
+- **Sin sobreventa**: la reserva de cupos es una actualización condicional atómica en PostgreSQL.
+- **Errores RFC 7807** con `code` estable y `traceId`; nunca se exponen detalles internos.
+- **Autorización** por scopes del token (`attractions:read|book|cancel|write`) y, para administrar el catálogo,
+  además un permiso local en base de datos.
 
-### Opción 1: Con Visual Studio 2022 o .NET CLI (Recomendado para desarrollo)
+## Desarrollo local
 
-1. **Abrir en Visual Studio 2022**:
-   - Haz doble clic en [`Aerocache.sln`](file:///C:/Users/default.LAPTOP-N0CGE918/.gemini/antigravity/scratch/Aerocache/Aerocache.sln).
-   - Establece `Aerocache.API` como proyecto de inicio y presiona **F5** o **Ctrl+F5**.
-   - O por terminal:
-     ```powershell
-     cd C:\Users\default.LAPTOP-N0CGE918\.gemini\antigravity\scratch\Aerocache
-     dotnet run --project Aerocache.API\Aerocache.API.csproj --urls "http://localhost:5200"
-     ```
-   - Swagger estará disponible en: [http://localhost:5200/swagger](http://localhost:5200/swagger)
+Requisitos: Node.js 22 o superior. No hace falta instalar PostgreSQL: se usa uno embebido.
 
-2. **Ejecutar el Frontend Web**:
-   ```powershell
-   cd C:\Users\default.LAPTOP-N0CGE918\.gemini\antigravity\scratch\Aerocache\aerocache-web
-   npm run dev
-   ```
-   - Abrir en el navegador: [http://localhost:5173](http://localhost:5173)
-
----
-
-### Opción 2: Con Docker y Docker Compose
-
-Levanta tanto la API como el frontend con un solo comando:
-```powershell
-cd C:\Users\default.LAPTOP-N0CGE918\.gemini\antigravity\scratch\Aerocache
-docker compose up --build -d
+```bat
+start-local.cmd          :: instala, compila y arranca PostgreSQL, auth, API y web
+start-local.cmd -Stop    :: detiene todo
 ```
-- **Portal Web AEROCACHE**: [http://localhost:3000](http://localhost:3000)
-- **API REST & Swagger**: [http://localhost:5200/swagger](http://localhost:5200/swagger)
 
----
+| Servicio | URL |
+|---|---|
+| Frontend | http://localhost:5173 |
+| Swagger del API | http://localhost:5276/docs |
+| Autenticación | http://localhost:5280 |
+| PostgreSQL | `postgres://postgres:tourgirls-local@localhost:5433/tourgirls` |
 
-## 📡 Endpoints Implementados (100% Contrato OpenAPI)
+La primera ejecución crea `apps/api/.env` y `apps/auth/.env` (ignorados por git) con un secreto JWT compartido.
+Para usar tu propio PostgreSQL, cambia `DATABASE_URL` en esos archivos.
 
-- `POST /search`: Búsqueda de vuelos domésticos (UIO, GYE, CUE).
-- `GET /offers/{offerId}/seatmap`: Mapa visual de asientos por cabina y segmento.
-- `POST /offers/hold`: Bloqueo de cupos por 15 minutos (precio congelado).
-- `GET /offers/hold/{holdId}`: Estado y tiempo restante del hold.
-- `DELETE /offers/hold/{holdId}`: Liberación anticipada del hold.
-- `GET /bookings`: Listado de reservas por PNR o estado.
-- `POST /bookings`: Creación de reserva con referencia de pago y emisión de tickets.
-- `GET /bookings/{id}`: Detalle completo de la reserva.
-- `GET /bookings/{id}/tickets`: Consulta de tickets electrónicos (045-XXXXXXXXXX).
-- `GET /bookings/{id}/baggage-options`: Consulta de maletas adicionales.
-- `POST /bookings/{id}/baggage`: Compra de maleta extra post-emisión.
-- `POST /bookings/{id}/date-change/search`: Cotización de cambio de fecha.
-- `POST /bookings/{id}/date-change`: Confirmación de reprogramación de vuelo.
-- `GET /bookings/{id}/cancellation-quote`: Cotización formal de reembolso.
-- `POST /bookings/{id}/cancel`: Cancelación definitiva de reserva.
-- `POST /bookings/{id}/check-in`: Check-in web con asignación de asientos.
-- `GET /bookings/{id}/boarding-passes`: Tarjetas de embarque digitales con QR.
-- `GET /flights/{flightNumber}/status`: Estado operativo en tiempo real.
-- `GET /webhooks`, `POST /webhooks`, `DELETE /webhooks/{id}`: Suscripción a eventos.
+**Administrador local:** regístrate en la web como `admin@tourgirls.test` (está en `ADMIN_EMAILS`), inicia sesión
+una vez y ejecuta `node tools/grant-admin.mjs admin@tourgirls.test`. Después cierra sesión y vuelve a entrar.
+
+### Swagger
+
+1. `POST http://localhost:5280/auth/login` con `{ "email": "...", "password": "..." }`.
+2. Copia `access_token`, pulsa **Authorize** en http://localhost:5276/docs y pégalo.
+
+## Scripts
+
+| Comando | Uso |
+|---|---|
+| `npm run build` | Compila todos los paquetes, el API y auth |
+| `npm test` | Pruebas unitarias y e2e (estas últimas con un PostgreSQL embebido temporal) |
+| `npm run db:local` | Solo el PostgreSQL local |
+| `npm run migration:generate -- packages/data-access/src/migrations/Nombre` | Nueva migración a partir de las entidades |
+
+Las migraciones se aplican solas al arrancar el API (`DB_MIGRATIONS_RUN=true`).
+
+## Despliegue
+
+Guía paso a paso para Azure (App Service + Azure Database for PostgreSQL + Static Web Apps): [AZURE_DEPLOY.md](AZURE_DEPLOY.md).

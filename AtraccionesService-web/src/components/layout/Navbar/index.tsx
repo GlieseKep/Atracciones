@@ -22,7 +22,7 @@ export const NAV_LINKS = [
  * y una segunda fila con la navegación principal.
  */
 export function Navbar() {
-  const { isAuthenticated, displayName, signIn, signOut, canManageCatalog, status } = useAuth();
+  const { isAuthenticated, displayName, signIn, signUp, signOut, canManageCatalog, status } = useAuth();
   const wishlistCount = useWishlistStore((s) => s.ids.length);
   const setMobileMenu = useUiStore((s) => s.setMobileMenu);
   const location = useLocation();
@@ -50,15 +50,25 @@ export function Navbar() {
           {isAuthenticated ? (
             <AccountMenu name={displayName} onSignOut={signOut} canManageCatalog={canManageCatalog} />
           ) : (
-            <button
-              type="button"
-              onClick={() => signIn()}
-              disabled={status === 'authenticating'}
-              className="hidden flex-col items-center rounded-md px-3 py-1 text-xs font-semibold text-ink hover:bg-surface sm:flex"
-            >
-              <User size={20} aria-hidden="true" />
-              Iniciar sesión
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={() => signIn()}
+                disabled={status === 'authenticating'}
+                className="hidden flex-col items-center rounded-md px-3 py-1 text-xs font-semibold text-ink hover:bg-surface sm:flex"
+              >
+                <User size={20} aria-hidden="true" />
+                Iniciar sesión
+              </button>
+              <button
+                type="button"
+                onClick={() => signUp()}
+                disabled={status === 'authenticating'}
+                className="ml-1 hidden rounded-full bg-brand-500 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-600 sm:inline-flex"
+              >
+                Crear cuenta
+              </button>
+            </>
           )}
           <button
             type="button"

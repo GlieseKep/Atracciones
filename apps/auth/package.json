@@ -1,0 +1,27 @@
+{
+  "name": "@atracciones/auth",
+  "version": "1.0.0",
+  "private": true,
+  "description": "dev-auth de TourGirls: registro e inicio de sesión con contraseña; emite JWT HS256 con secreto compartido.",
+  "main": "dist/main.js",
+  "scripts": {
+    "start": "node dist/main.js"
+  },
+  "dependencies": {
+    "@nestjs/common": "^11.1.0",
+    "@nestjs/core": "^11.1.0",
+    "@nestjs/platform-express": "^11.1.0",
+    "@nestjs/throttler": "^6.4.0",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.2",
+    "jose": "^5.10.0",
+    "pg": "^8.16.0",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2"
+  },
+  "devDependencies": {
+    "@nestjs/testing": "^11.1.0",
+    "@types/express": "^5.0.6",
+    "@types/pg": "^8.15.4"
+  }
+}

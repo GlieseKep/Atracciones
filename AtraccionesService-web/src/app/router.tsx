@@ -17,7 +17,8 @@ const OrderPage = lazy(() => import('@/pages/OrderPage'));
 const ProfilePage = lazy(() => import('@/pages/ProfilePage'));
 const WishlistPage = lazy(() => import('@/pages/WishlistPage'));
 const HelpPage = lazy(() => import('@/pages/HelpPage'));
-const AuthCallbackPage = lazy(() => import('@/pages/AuthCallbackPage'));
+const LoginPage = lazy(() => import('@/pages/AuthPages').then((m) => ({ default: m.LoginPage })));
+const RegisterPage = lazy(() => import('@/pages/AuthPages').then((m) => ({ default: m.RegisterPage })));
 const NotFoundPage = lazy(() => import('@/pages/NotFoundPage'));
 const AdminLayout = lazy(() => import('@/pages/admin/AdminLayout'));
 const AdminDashboardPage = lazy(() => import('@/pages/admin/AdminDashboardPage'));
@@ -46,7 +47,8 @@ export const router = createBrowserRouter([
       { path: ROUTES.search, element: <SearchPage /> },
       { path: ROUTES.wishlist, element: <WishlistPage /> },
       { path: ROUTES.help, element: <HelpPage /> },
-      { path: ROUTES.authCallback, element: <AuthCallbackPage /> },
+      { path: ROUTES.login, element: <LoginPage /> },
+      { path: ROUTES.register, element: <RegisterPage /> },
       { path: ROUTES.reserve, element: privateRoute(<ReservationPage />) },
       { path: ROUTES.purchase, element: privateRoute(<PurchasePage />) },
       { path: ROUTES.reservation, element: privateRoute(<ReservationDetailPage />) },

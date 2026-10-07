@@ -1,14 +1,20 @@
-import { LogIn, ShieldCheck } from 'lucide-react';
+import { LogIn, ShieldCheck, UserPlus } from 'lucide-react';
 import { Button } from '@/components/common/Button';
 import { Modal } from '@/components/common/Modal';
 import { useAuth } from '@/hooks/useAuth';
 import { useUiStore } from '@/stores/uiStore';
 
-/** Diálogo para iniciar sesión antes de reservar o comprar (Viator lo pide al pagar). */
+/** Diálogo para iniciar sesión o crear una cuenta antes de reservar o comprar (Viator lo pide al pagar). */
 export function LoginPrompt() {
   const prompt = useUiStore((s) => s.loginPrompt);
   const close = useUiStore((s) => s.closeLoginPrompt);
-  const { signIn } = useAuth();
+  const { signIn, signUp } = useAuth();
+
+  const go = (action: typeof signIn) => {
+    const returnTo = prompt?.returnTo;
+    close();
+    void action(returnTo);
+  };
 
   return (
     <Modal
@@ -18,16 +24,10 @@ export function LoginPrompt() {
       size="sm"
       footer={
         <>
-          <Button variant="tertiary" onClick={close}>
-            Ahora no
+          <Button variant="secondary" onClick={() => go(signUp)}>
+            <UserPlus size={18} aria-hidden="true" /> Crear cuenta
           </Button>
-          <Button
-            onClick={() => {
-              const returnTo = prompt?.returnTo;
-              close();
-              void signIn(returnTo);
-            }}
-          >
+          <Button onClick={() => go(signIn)}>
             <LogIn size={18} aria-hidden="true" /> Iniciar sesión
           </Button>
         </>
@@ -36,7 +36,7 @@ export function LoginPrompt() {
       <p className="text-ink-soft">{prompt?.reason ?? 'Necesitas una cuenta para reservar y comprar experiencias.'}</p>
       <p className="mt-4 flex items-start gap-2 text-sm text-ink-soft">
         <ShieldCheck size={18} className="mt-0.5 shrink-0 text-success" aria-hidden="true" />
-        Te redirigiremos al proveedor de identidad seguro (OAuth2). Nunca guardamos tu contraseña.
+        Te llevaremos al acceso seguro de TourGirls. Crear una cuenta es gratis y solo toma un minuto.
       </p>
     </Modal>
   );

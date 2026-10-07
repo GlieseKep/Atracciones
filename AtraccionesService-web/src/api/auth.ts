@@ -1,9 +1,10 @@
-import { beginLogin, completeLogin, logout } from '@/features/auth/oauth';
+import { loginWithPassword, registerAccount, startSession, type TokenResponse } from '@/features/auth/session';
+import { useAuthStore } from '@/stores/authStore';
 import type { RegisterProfileRequest, RegisterProfileResponse, User } from '@/types/identity';
 import { isApiError } from '@/utils/api';
 import { http } from './client';
 
-/** Registro del perfil local: la identidad sale de los claims del token, no del cuerpo. */
+/** Registro del perfil local en el API: la identidad sale de los claims del token, no del cuerpo. */
 export const registerProfile = (body: RegisterProfileRequest = {}) =>
   http.post<RegisterProfileResponse>('/auth/register', body);
 
@@ -20,4 +21,20 @@ export async function ensureProfile(): Promise<User> {
   }
 }
 
-export { beginLogin as login, completeLogin as handleCallback, logout };
+/** Inicia la sesión y aprovisiona el perfil del API. Un fallo del perfil no invalida la sesión: se reintentará. */
+async function establish(response: TokenResponse): Promise<void> {
+  startSession(response);
+  try {
+    useAuthStore.getState().setUser(await ensureProfile());
+  } catch {
+    /* el perfil se reintentará al usarlo */
+  }
+}
+
+export async function login(email: string, password: string): Promise<void> {
+  await establish(await loginWithPassword(email.trim(), password));
+}
+
+export async function register(name: string, email: string, password: string): Promise<void> {
+  await establish(await registerAccount(name.trim(), email.trim(), password));
+}

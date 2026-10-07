@@ -12,16 +12,6 @@ import { useAuthStore } from '@/stores/authStore';
 import { useWishlistStore } from '@/stores/wishlistStore';
 import { today } from '@/utils/dates';
 
-const loginMock = vi.fn();
-vi.mock('@/features/auth/oauth', async (original) => ({
-  ...(await original<typeof import('@/features/auth/oauth')>()),
-  beginLogin: (returnTo: string) => loginMock(returnTo),
-}));
-vi.mock('@/config/env', async (original) => {
-  const mod = await original<typeof import('@/config/env')>();
-  return { ...mod, isOAuthConfigured: () => true };
-});
-
 function LocationProbe() {
   const location = useLocation();
   return <p data-testid="location">{location.pathname + location.search}</p>;
@@ -30,7 +20,6 @@ function LocationProbe() {
 const teleferico = DEMO_ATTRACTIONS[0];
 
 beforeEach(() => {
-  loginMock.mockReset();
   useAuthStore.getState().clear();
   useWishlistStore.setState({ ids: [] });
 });
@@ -137,14 +126,15 @@ describe('ProtectedRoute', () => {
               </ProtectedRoute>
             }
           />
+          <Route path="/login" element={<LocationProbe />} />
         </Routes>
       </MemoryRouter>,
     );
 
-  it('redirige al inicio de sesión externo conservando la ruta de regreso', () => {
+  it('redirige al inicio de sesión conservando la ruta de regreso', () => {
     renderAt('/perfil?tab=reservas');
     expect(screen.queryByText('Contenido privado')).not.toBeInTheDocument();
-    expect(loginMock).toHaveBeenCalledWith('/perfil?tab=reservas');
+    expect(screen.getByTestId('location')).toHaveTextContent(`/login?returnTo=${encodeURIComponent('/perfil?tab=reservas')}`);
   });
 
   it('muestra el contenido con sesión válida', () => {

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { BadgeCheck, CalendarCheck, LogIn, MapPinned, Quote, ShieldCheck } from 'lucide-react';
+import { BadgeCheck, CalendarCheck, LogIn, MapPinned, Quote, ShieldCheck, UserPlus } from 'lucide-react';
 import { AttractionCard, AttractionCardSkeleton } from '@/components/attractions/AttractionCard';
 import { Button, ButtonLink } from '@/components/common/Button';
 import { ErrorState } from '@/components/common/Feedback';
@@ -26,7 +26,7 @@ const WHY_ICONS = [CalendarCheck, MapPinned, ShieldCheck, BadgeCheck];
 /** Página de destino al estilo "Cosas que hacer en Quito" de Viator, ampliada a Ecuador. */
 export default function HomePage() {
   const catalog = useAllAttractions();
-  const { isAuthenticated, signIn } = useAuth();
+  const { isAuthenticated, signIn, signUp } = useAuth();
   const [audience, setAudience] = useState(AUDIENCES[0].id);
 
   const all = useMemo(() => catalog.data ?? [], [catalog.data]);
@@ -195,12 +195,17 @@ export default function HomePage() {
                 Reserva en segundos con tu cuenta
               </h2>
               <p className="mt-2 max-w-xl text-white/80">
-                Inicia sesión de forma segura para reservar, pagar y seguir tus pedidos. Accede con tu proveedor OAuth2: no guardamos contraseñas.
+                Crea tu cuenta gratis para reservar, pagar y seguir tus pedidos desde cualquier dispositivo.
               </p>
             </div>
-            <Button size="lg" onClick={() => signIn()}>
-              <LogIn size={18} aria-hidden="true" /> Iniciar sesión o registrarse
-            </Button>
+            <div className="flex flex-wrap gap-3">
+              <Button size="lg" onClick={() => signUp()}>
+                <UserPlus size={18} aria-hidden="true" /> Crear cuenta
+              </Button>
+              <Button size="lg" variant="secondary" onClick={() => signIn()}>
+                <LogIn size={18} aria-hidden="true" /> Iniciar sesión
+              </Button>
+            </div>
           </div>
         </section>
       )}

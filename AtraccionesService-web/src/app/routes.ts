@@ -11,6 +11,7 @@ export const ROUTES = {
   profile: '/perfil',
   wishlist: '/favoritos',
   help: '/ayuda',
-  authCallback: '/auth/callback',
+  login: '/login',
+  register: '/registro',
   admin: '/admin',
 } as const;

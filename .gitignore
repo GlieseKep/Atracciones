@@ -33,3 +33,13 @@ ehthumbs.db
 Desktop.ini
 $RECYCLE.BIN/
 .DS_Store
+
+# Despliegue en Azure: paquetes publicados y secretos generados localmente
+/out/
+/.azure-secrets/
+
+# Backend NestJS: secretos locales (AUTH_JWT_SECRET, DATABASE_URL) y PostgreSQL embebido
+apps/*/.env
+/.data/
+*.tsbuildinfo
+coverage/
