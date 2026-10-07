@@ -1,5 +1,6 @@
 import { newId, ORDER_STATUSES, roundCents, PAYMENT_STATUSES, RESERVATION_STATUSES, USER_STATUSES, type UserStatus } from '@atracciones/domain';
 import type {
+  AdminAuditRow,
   AdminListFilter,
   AdminOrderDetail,
   AdminOrderRow,
@@ -35,6 +36,7 @@ export interface AdminListQuery {
 }
 
 export const SLOT_FILTERS = ['AVAILABLE', 'FULL'] as const;
+export const AUDIT_RESOURCE_TYPES = ['attraction', 'availability', 'order', 'user'] as const;
 export const MAX_SLOT_CAPACITY = 10_000;
 const MAX_REPORT_DAYS = 366;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -259,6 +261,12 @@ export class AdminService {
       .when(isIsoDate(from) && isIsoDate(to) && addDays(from, MAX_REPORT_DAYS) < to, 'toDate', `El rango no puede superar ${MAX_REPORT_DAYS} días.`)
       .throwIfAny();
     return { fromDate: from, toDate: to, ...(await this.units.create().admin.salesReport(from, to)) };
+  }
+
+  /** Registro de auditoría de los cambios administrativos y de catálogo. `status` = tipo de recurso. */
+  async auditLog(actor: AuthenticatedUser, query: AdminListQuery): Promise<PaginationResult<AdminAuditRow>> {
+    const filter = await this.prepare(actor, query, AUDIT_RESOURCE_TYPES);
+    return toPage(await this.units.create().admin.listAudit(filter, query), query);
   }
 
   private async prepare(actor: AuthenticatedUser, query: AdminListQuery, statuses: readonly string[]): Promise<AdminListFilter> {

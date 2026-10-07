@@ -22,6 +22,8 @@ interface Props<T> {
   rowKey: (row: T) => string;
   searchPlaceholder?: string;
   statuses?: { value: string; label: string }[];
+  /** Etiqueta del filtro de `status` (por defecto, Estado). */
+  statusLabel?: string;
   /** Muestra filtros de fecha (`fromDate`, `toDate`) con esta etiqueta. */
   dateLabel?: string;
   extraFilters?: ReactNode;
@@ -40,6 +42,7 @@ export function AdminTable<T>({
   rowKey,
   searchPlaceholder = 'Buscar',
   statuses,
+  statusLabel = 'Estado',
   dateLabel,
   extraFilters,
   extraParams,
@@ -98,7 +101,7 @@ export function AdminTable<T>({
         />
         {statuses && (
           <Select
-            label="Estado"
+            label={statusLabel}
             value={status}
             onChange={(e) => setStatus(e.target.value)}
             options={[{ value: '', label: 'Todos' }, ...statuses]}

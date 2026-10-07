@@ -163,6 +163,18 @@ export interface AdminSalesReport {
   reservationsByAttraction: { attractionId: string; attractionName: string; reservations: number; tickets: number }[];
 }
 
+/** Entrada del registro de auditoría con el correo del actor (si sigue existiendo como usuario local). */
+export interface AdminAuditRow {
+  id: string;
+  action: string;
+  resourceType: string;
+  resourceId: string;
+  reason: string | null;
+  actorEmail: string | null;
+  actorSubject: string;
+  createdAt: Date;
+}
+
 /** Consultas y cambios administrativos. Las reglas (quién, qué valores) las aplica Business. */
 export interface AdminRepository {
   getSummary(from: IsoDate, days: number): Promise<AdminSummary>;
@@ -187,4 +199,6 @@ export interface AdminRepository {
   /** Revoca la asignación vigente (conserva el registro). Devuelve `false` si no había ninguna. */
   revokeRole(userId: string, roleId: string, at: Date): Promise<boolean>;
   salesReport(fromDate: IsoDate, toDate: IsoDate): Promise<AdminSalesReport>;
+  /** Registro de auditoría, del más reciente al más antiguo. `status` filtra por tipo de recurso; las fechas, por día. */
+  listAudit(filter: AdminListFilter, page: PaginationRequest): Promise<PagedResult<AdminAuditRow>>;
 }

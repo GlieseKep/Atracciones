@@ -12,8 +12,10 @@ import {
   UpdateUserStatusRequest,
 } from '@atracciones/contracts';
 import type { Response } from 'express';
+import type { DataSource } from 'typeorm';
 import { CurrentUser, RequirePermission, RequireScope, Scopes } from '../auth/auth';
-import { BUSINESS } from '../config';
+import { BUSINESS, DATA_SOURCE } from '../config';
+import { METRICS, type RequestMetrics } from '../http/metrics';
 import { IDEMPOTENCY_HEADER, IdempotencyKey, ParseResourceId } from '../http/request-helpers';
 import { apiPath, toPaged } from '../http/responses';
 
@@ -41,7 +43,11 @@ const idempotencyDoc = ApiHeader({ name: IDEMPOTENCY_HEADER, required: true, des
 @RequirePermission(LocalPermissions.AdminManage)
 @Controller('admin')
 export class AdminController {
-  constructor(@Inject(BUSINESS) private readonly business: BusinessServices) {}
+  constructor(
+    @Inject(BUSINESS) private readonly business: BusinessServices,
+    @Inject(DATA_SOURCE) private readonly dataSource: DataSource,
+    @Inject(METRICS) private readonly metrics: RequestMetrics,
+  ) {}
 
   @Get('summary')
   @ApiOperation({ summary: 'Indicadores generales: clientes, reservas, pedidos, pagos, ingresos y ocupación (30 días)' })
@@ -157,6 +163,26 @@ export class AdminController {
   @ApiOperation({ summary: 'Cambiar la capacidad de una franja (nunca por debajo de lo reservado)' })
   updateCapacity(@Param('slotId', ParseResourceId) slotId: string, @Body() body: UpdateSlotCapacityRequest, @CurrentUser() user: AuthenticatedUser) {
     return this.business.admin.updateSlotCapacity(user, slotId, body.capacity);
+  }
+
+  @Get('observability')
+  @ApiOperation({ summary: 'Estado del API y de la base de datos, métricas HTTP en memoria (desde el último reinicio) y errores recientes' })
+  async observability() {
+    const start = process.hrtime.bigint();
+    let database: { status: 'ok' | 'down'; latencyMs: number | null; error: string | null };
+    try {
+      await this.dataSource.query('SELECT 1');
+      database = { status: 'ok', latencyMs: Math.round(Number(process.hrtime.bigint() - start) / 1e5) / 10, error: null };
+    } catch (error) {
+      database = { status: 'down', latencyMs: null, error: error instanceof Error ? error.message : String(error) };
+    }
+    return { checkedAt: new Date().toISOString(), database, ...this.metrics.snapshot() };
+  }
+
+  @Get('audit')
+  @ApiOperation({ summary: 'Registro de auditoría de cambios administrativos y de catálogo. status = tipo de recurso: attraction, availability, order, user' })
+  async audit(@Query() query: AdminListQuery, @CurrentUser() user: AuthenticatedUser) {
+    return toPaged(await this.business.admin.auditLog(user, toQuery(query)), same);
   }
 
   @Get('reports/sales')

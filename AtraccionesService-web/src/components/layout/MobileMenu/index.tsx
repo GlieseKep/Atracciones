@@ -14,6 +14,7 @@ export function MobileMenu() {
   const setOpen = useUiStore((s) => s.setMobileMenu);
   const { isAuthenticated, signIn, signUp, signOut, displayName, canManageCatalog } = useAuth();
   const location = useLocation();
+  const isAdmin = isAuthenticated && canManageCatalog;
 
   useEffect(() => setOpen(false), [location.pathname, location.hash, setOpen]);
   useEffect(() => {
@@ -32,51 +33,73 @@ export function MobileMenu() {
 
   return (
     <div className="fixed inset-0 z-50 md:hidden" role="dialog" aria-modal="true" aria-label="Menú">
-      <button type="button" className="absolute inset-0 bg-night/50" aria-label="Cerrar menú" onClick={() => setOpen(false)} />
+      <button
+        type="button"
+        className="absolute inset-0 bg-night/50"
+        aria-label="Cerrar menú"
+        onClick={() => setOpen(false)}
+      />
       <div className="fade-in absolute inset-y-0 right-0 flex w-[88%] max-w-sm flex-col bg-white shadow-raised">
         <div className="flex items-center justify-between border-b border-line px-4 py-4">
           <Logo />
-          <button type="button" onClick={() => setOpen(false)} aria-label="Cerrar menú" className="rounded-full p-2 hover:bg-surface">
+          <button
+            type="button"
+            onClick={() => setOpen(false)}
+            aria-label="Cerrar menú"
+            className="rounded-full p-2 hover:bg-surface"
+          >
             <X size={22} aria-hidden="true" />
           </button>
         </div>
         <div className="flex-1 overflow-y-auto px-4 py-4">
-          <SearchBar variant="compact" />
+          {!isAdmin && <SearchBar variant="compact" />}
           <nav aria-label="Principal móvil" className="mt-4 flex flex-col">
-            {NAV_LINKS.map((link) => (
-              <Link key={link.to} to={link.to} className={row}>
-                {link.label}
-              </Link>
-            ))}
-            <hr className="my-3 border-line" />
-            <Link to={paths.wishlist()} className={row}>
-              <Heart size={20} aria-hidden="true" /> Lista de deseos
-            </Link>
-            {isAuthenticated ? (
+            {isAdmin ? (
               <>
-                <Link to={paths.profile('reservas')} className={row}>
-                  <CalendarCheck size={20} aria-hidden="true" /> Mis reservas
+                <Link to={paths.admin()} className={row}>
+                  <LayoutDashboard size={20} aria-hidden="true" /> Administración
                 </Link>
-                <Link to={paths.profile()} className={row}>
-                  <User size={20} aria-hidden="true" /> {displayName}
-                </Link>
-                {canManageCatalog && (
-                  <Link to={paths.admin()} className={row}>
-                    <LayoutDashboard size={20} aria-hidden="true" /> Administración
-                  </Link>
-                )}
                 <button type="button" onClick={signOut} className={`${row} text-left`}>
                   <LogOut size={20} aria-hidden="true" /> Cerrar sesión
                 </button>
               </>
             ) : (
               <>
-                <button type="button" onClick={() => signIn()} className={`${row} text-left text-brand-500`}>
-                  <LogIn size={20} aria-hidden="true" /> Iniciar sesión
-                </button>
-                <button type="button" onClick={() => signUp()} className={`${row} text-left`}>
-                  <UserPlus size={20} aria-hidden="true" /> Crear cuenta
-                </button>
+                {NAV_LINKS.map((link) => (
+                  <Link key={link.to} to={link.to} className={row}>
+                    {link.label}
+                  </Link>
+                ))}
+                <hr className="my-3 border-line" />
+                <Link to={paths.wishlist()} className={row}>
+                  <Heart size={20} aria-hidden="true" /> Lista de deseos
+                </Link>
+                {isAuthenticated ? (
+                  <>
+                    <Link to={paths.profile('reservas')} className={row}>
+                      <CalendarCheck size={20} aria-hidden="true" /> Mis reservas
+                    </Link>
+                    <Link to={paths.profile()} className={row}>
+                      <User size={20} aria-hidden="true" /> {displayName}
+                    </Link>
+                    <button type="button" onClick={signOut} className={`${row} text-left`}>
+                      <LogOut size={20} aria-hidden="true" /> Cerrar sesión
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => signIn()}
+                      className={`${row} text-left text-brand-500`}
+                    >
+                      <LogIn size={20} aria-hidden="true" /> Iniciar sesión
+                    </button>
+                    <button type="button" onClick={() => signUp()} className={`${row} text-left`}>
+                      <UserPlus size={20} aria-hidden="true" /> Crear cuenta
+                    </button>
+                  </>
+                )}
               </>
             )}
           </nav>

@@ -190,6 +190,26 @@ describe('panel de administración', () => {
     await http.post('/api/v1/admin/availability').set('Authorization', auth).send({ attractionId: SEEDED.cotopaxi, date, time: '17:30', capacity: 8 }).expect(409);
     const audit = await dataSource.query(`SELECT action FROM audit_events WHERE resource_id = $1`, [slot.id]);
     expect(audit.map((a: { action: string }) => a.action)).toContain('availability.capacity_changed');
+
+    const log = await http.get('/api/v1/admin/audit').query({ search: slot.id, status: 'availability' }).set('Authorization', auth).expect(200);
+    expect(log.body.data[0]).toMatchObject({ action: 'availability.capacity_changed', resourceType: 'availability', resourceId: slot.id, reason: '20 -> 3' });
+    expect(log.body.data[0].actorEmail).toMatch(/@admin-tests\.com$/);
+    await http.get('/api/v1/admin/audit').query({ status: 'payment' }).set('Authorization', auth).expect(400);
+  });
+
+  it('expone el estado de la base de datos y las métricas HTTP solo a administradores', async () => {
+    const buyer = await customer();
+    await http.get('/api/v1/admin/observability').set('Authorization', buyer.auth).expect(403);
+    await http.get('/api/v1/admin/audit').set('Authorization', buyer.auth).expect(403);
+
+    const { auth } = await admin();
+    const res = await http.get('/api/v1/admin/observability').set('Authorization', auth).expect(200);
+    expect(res.body.database).toMatchObject({ status: 'ok', error: null });
+    expect(res.body.requests.total).toBeGreaterThan(0);
+    expect(res.body.requests.byStatusClass['4xx']).toBeGreaterThan(0);
+    expect(res.body.timeline).toHaveLength(60);
+    expect(res.body.latencyMs.p95).toBeGreaterThanOrEqual(res.body.latencyMs.p50);
+    expect(res.body.routes.some((r: { route: string }) => r.route.includes('/admin/'))).toBe(true);
   });
 
   it('cambia el estado de usuarios y asigna o revoca roles', async () => {

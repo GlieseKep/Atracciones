@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { IsoDate, LocalTime, UserStatus } from '@atracciones/domain';
 import {
   PagedResult,
+  type AdminAuditRow,
   type AdminListFilter,
   type AdminOrderDetail,
   type AdminOrderRow,
@@ -65,6 +66,34 @@ export class TypeOrmAdminRepository implements AdminRepository {
       where.params,
     );
     return PagedResult.create(rows.map(map), num(total), page);
+  }
+
+  listAudit(filter: AdminListFilter, page: PaginationRequest): Promise<PagedResult<AdminAuditRow>> {
+    const where = new Where()
+      .when(filter.search, (p) => {
+        const s = p(like(filter.search!));
+        return `(ae.action ILIKE ${s} OR ae.resource_id ILIKE ${s} OR ae.reason ILIKE ${s} OR u.email ILIKE ${s})`;
+      })
+      .when(filter.status, (p) => `ae.resource_type = ${p(filter.status)}`)
+      .when(filter.fromDate, (p) => `ae.created_at >= ${p(filter.fromDate)}::date`)
+      .when(filter.toDate, (p) => `ae.created_at < ${p(filter.toDate)}::date + 1`);
+    return this.page(
+      `FROM audit_events ae LEFT JOIN users u ON u.id = ae.actor_user_id`,
+      where,
+      `ae.id, ae.action, ae.resource_type, ae.resource_id, ae.reason, ae.actor_subject, u.email AS actor_email, ae.created_at`,
+      'ae.created_at DESC',
+      page,
+      (r) => ({
+        id: String(r.id),
+        action: String(r.action),
+        resourceType: String(r.resource_type),
+        resourceId: String(r.resource_id),
+        reason: (r.reason as string | null) ?? null,
+        actorEmail: (r.actor_email as string | null) ?? null,
+        actorSubject: String(r.actor_subject),
+        createdAt: r.created_at as Date,
+      }),
+    );
   }
 
   async getSummary(from: IsoDate, days: number): Promise<AdminSummary> {

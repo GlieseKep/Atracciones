@@ -9,6 +9,7 @@ import type { DataSource } from 'typeorm';
 import { AppModule, requestId } from './app.module';
 import { SCOPE_DESCRIPTIONS } from './auth/auth';
 import type { ApiConfig } from './config';
+import { RequestMetrics } from './http/metrics';
 import { apiValidationPipe } from './http/request-helpers';
 import { API_PREFIX } from './http/responses';
 
@@ -28,11 +29,13 @@ export async function initializeDatabase(config: ApiConfig): Promise<DataSource>
 
 /** Crea y configura la aplicación HTTP (sin escuchar), reutilizable en pruebas. */
 export async function createApp(config: ApiConfig, dataSource: DataSource): Promise<INestApplication> {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule.register(config, dataSource), {
+  const metrics = new RequestMetrics();
+  const app = await NestFactory.create<NestExpressApplication>(AppModule.register(config, dataSource, metrics), {
     logger: ['error', 'warn', 'log'],
     bodyParser: true,
   });
   app.use(requestId);
+  app.use(metrics.middleware);
   app.useBodyParser('json', { limit: '256kb' });
   if (config.trustProxy) app.set('trust proxy', 1);
   app.disable('x-powered-by');

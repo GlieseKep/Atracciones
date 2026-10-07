@@ -142,6 +142,31 @@ export interface SalesReport {
   reservationsByAttraction: { attractionId: string; attractionName: string; reservations: number; tickets: number }[];
 }
 
+/** Métricas del API en memoria: se reinician cada vez que el proceso arranca. */
+export interface Observability {
+  checkedAt: IsoDateTime;
+  database: { status: 'ok' | 'down'; latencyMs: number | null; error: string | null };
+  startedAt: IsoDateTime;
+  uptimeSeconds: number;
+  requests: { total: number; byStatusClass: Record<string, number>; clientErrors: number; serverErrors: number };
+  latencyMs: { p50: number; p95: number; p99: number; max: number; samples: number };
+  timeline: { minute: IsoDateTime; requests: number; errors: number }[];
+  routes: { route: string; count: number; errors: number; avgMs: number; maxMs: number }[];
+  recentErrors: { at: IsoDateTime; method: string; path: string; status: number; durationMs: number; requestId: string | null }[];
+  process: { node: string; memoryMb: { rss: number; heapUsed: number; heapTotal: number }; cpuSeconds: number };
+}
+
+export interface AdminAuditEvent {
+  id: string;
+  action: string;
+  resourceType: 'attraction' | 'availability' | 'order' | 'user';
+  resourceId: string;
+  reason: string | null;
+  actorEmail: string | null;
+  actorSubject: string;
+  createdAt: IsoDateTime;
+}
+
 export interface AdminListParams {
   limit?: number;
   offset?: number;
@@ -178,4 +203,18 @@ export const adminApi = {
   updateCapacity: (slotId: string, capacity: number) => http.patch<AdminSlot>(`/admin/availability/${slotId}`, { capacity }),
   addSlot: (body: { attractionId: string; date: IsoDate; time: string; capacity: number }) =>
     http.post<AdminSlot>('/admin/availability', body),
+  observability: (signal?: AbortSignal) => http.get<Observability>('/admin/observability', { signal }),
+  audit: list<AdminAuditEvent>('/admin/audit'),
 };
+
+/** Comprueba un endpoint `/health` público y mide cuánto tarda en responder. */
+export async function checkHealth(url: string, signal?: AbortSignal): Promise<{ ok: boolean; latencyMs: number }> {
+  const start = performance.now();
+  try {
+    const response = await fetch(url, { signal, cache: 'no-store' });
+    return { ok: response.ok, latencyMs: Math.round(performance.now() - start) };
+  } catch (error) {
+    if (signal?.aborted) throw error;
+    return { ok: false, latencyMs: Math.round(performance.now() - start) };
+  }
+}

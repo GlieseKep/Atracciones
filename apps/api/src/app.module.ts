@@ -12,6 +12,7 @@ import { API_CONFIG, BUSINESS, DATA_SOURCE, type ApiConfig } from './config';
 import { AdminController } from './controllers/admin.controller';
 import { AttractionsController } from './controllers/catalog.controllers';
 import { EcommerceController, IdentityController, ReservationsController } from './controllers/operation.controllers';
+import { METRICS, type RequestMetrics } from './http/metrics';
 import { ProblemDetailsFilter } from './http/problems';
 
 @ApiExcludeController()
@@ -37,7 +38,7 @@ class IdentityThrottlerGuard extends ThrottlerGuard {
 
 @Module({})
 export class AppModule {
-  static register(config: ApiConfig, dataSource: DataSource): DynamicModule {
+  static register(config: ApiConfig, dataSource: DataSource, metrics: RequestMetrics): DynamicModule {
     const business = createBusinessServices(new TypeOrmUnitOfWorkFactory(dataSource), config.business);
     return {
       module: AppModule,
@@ -48,6 +49,7 @@ export class AppModule {
         { provide: API_CONFIG, useValue: config },
         { provide: DATA_SOURCE, useValue: dataSource },
         { provide: BUSINESS, useValue: business },
+        { provide: METRICS, useValue: metrics },
         { provide: APP_FILTER, useClass: ProblemDetailsFilter },
         // Orden: primero autenticación (resuelve `sub`), después el límite de tasa por identidad.
         { provide: APP_GUARD, useClass: AuthGuard },

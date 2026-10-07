@@ -26,6 +26,7 @@ const AdminCatalogPage = lazy(() => import('@/pages/admin/AdminCatalogPage'));
 const AdminAvailabilityPage = lazy(() => import('@/pages/admin/AdminAvailabilityPage'));
 const AdminCustomersPage = lazy(() => import('@/pages/admin/AdminCustomersPage'));
 const AdminReportsPage = lazy(() => import('@/pages/admin/AdminReportsPage'));
+const AdminObservabilityPage = lazy(() => import('@/pages/admin/AdminObservabilityPage'));
 const AdminReservationsPage = lazy(() => import('@/pages/admin/AdminOperationsPages').then((m) => ({ default: m.AdminReservationsPage })));
 const AdminOrdersPage = lazy(() => import('@/pages/admin/AdminOrdersPage'));
 const AdminPaymentsPage = lazy(() => import('@/pages/admin/AdminOperationsPages').then((m) => ({ default: m.AdminPaymentsPage })));
@@ -66,6 +67,7 @@ export const router = createBrowserRouter([
           { path: 'clientes', element: <AdminCustomersPage key="clientes" /> },
           { path: 'usuarios', element: <AdminCustomersPage key="usuarios" manageRoles /> },
           { path: 'reportes', element: <AdminReportsPage /> },
+          { path: 'observabilidad', element: <AdminObservabilityPage /> },
         ],
       },
       { path: '*', element: <NotFoundPage /> },

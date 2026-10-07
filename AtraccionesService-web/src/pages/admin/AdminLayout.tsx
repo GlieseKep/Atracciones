@@ -1,5 +1,5 @@
 import { NavLink, Outlet } from 'react-router-dom';
-import { BarChart3, CalendarRange, ClipboardList, CreditCard, LayoutDashboard, Map, Receipt, UserCog, Users } from 'lucide-react';
+import { Activity, BarChart3, CalendarRange, ClipboardList, CreditCard, LayoutDashboard, Map, Receipt, UserCog, Users } from 'lucide-react';
 
 export const ADMIN_SECTIONS = [
   { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, end: true },
@@ -11,6 +11,7 @@ export const ADMIN_SECTIONS = [
   { to: '/admin/clientes', label: 'Clientes', icon: Users },
   { to: '/admin/usuarios', label: 'Usuarios y roles', icon: UserCog },
   { to: '/admin/reportes', label: 'Reportes', icon: BarChart3 },
+  { to: '/admin/observabilidad', label: 'Observabilidad', icon: Activity },
 ];
 
 /** Layout del área administrativa. La ocultación en el frontend no sustituye la autorización del servidor. */
