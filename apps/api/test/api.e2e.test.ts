@@ -41,7 +41,7 @@ describe('salud y documentación', () => {
 
 describe('autenticación y scopes', () => {
   it('rechaza solicitudes sin token con problem+json y WWW-Authenticate', async () => {
-    const res = await http.get('/api/v1/atracciones').expect(401);
+    const res = await http.get('/api/v1/users/me').expect(401);
     expect(res.headers['content-type']).toContain('application/problem+json');
     expect(res.headers['www-authenticate']).toBe('Bearer');
     expect(res.body).toMatchObject({ status: 401, code: 'UNAUTHORIZED', type: 'urn:atracciones:problems:unauthorized' });
@@ -50,8 +50,24 @@ describe('autenticación y scopes', () => {
 
   it('rechaza tokens con otra firma, otro emisor o expirados', async () => {
     for (const bad of [await token({ secret: 'otro-secreto-de-al-menos-32-caracteres!!' }), await token({ issuer: 'evil' }), await token({ expiresIn: '-5m' })]) {
-      await http.get('/api/v1/atracciones').set('Authorization', `Bearer ${bad}`).expect(401);
+      await http.get('/api/v1/users/me').set('Authorization', `Bearer ${bad}`).expect(401);
     }
+  });
+
+  it('permite leer el catálogo sin token, pero no modificarlo', async () => {
+    const list = await http.get('/api/v1/atracciones').expect(200);
+    expect(list.body.data.length).toBeGreaterThan(0);
+    const id = list.body.data[0].id;
+    await http.get(`/api/v1/atracciones/${id}`).expect(200);
+    await http.get(`/api/v1/atracciones/${id}/availability`).query({ date: inDays(5) }).expect(200);
+    const search = await http.post('/api/v1/atracciones/search').send({ rows: 2 }).expect(200);
+    expect(search.body.data).toHaveLength(2);
+    await http.post('/api/v1/atracciones/details').send({ attractions: [id] }).expect(200);
+
+    await http.post('/api/v1/atracciones').set(idem()).send({}).expect(401);
+    await http.delete(`/api/v1/atracciones/${id}`).set(idem()).expect(401);
+    await http.post(`/api/v1/atracciones/${id}/reservations`).set(idem()).send({}).expect(401);
+    await http.get('/api/v1/atracciones/reservations').expect(401);
   });
 
   it('exige el scope de cada operación', async () => {
@@ -115,7 +131,7 @@ describe('catálogo', () => {
   it('devuelve el detalle, disponibilidad por franja y 404 para identificadores inválidos', async () => {
     const { auth } = await customer();
     const detail = await http.get(`/api/v1/atracciones/${SEEDED.teleferico}`).set('Authorization', auth).expect(200);
-    expect(detail.headers['cache-control']).toBe('private, max-age=60');
+    expect(detail.headers['cache-control']).toBe('public, max-age=60');
     expect(detail.body).toMatchObject({ productType: 'SINGLE_TICKET', price: { currency: 'USD', total: 9.5 }, ratings: { numberOfReviews: 1250, score: 4.6 } });
     const availability = await http.get(`/api/v1/atracciones/${SEEDED.teleferico}/availability?date=${inDays(10)}`).set('Authorization', auth).expect(200);
     expect(availability.body).toMatchObject({ timeZone: 'America/Guayaquil', availableSpots: 40 });

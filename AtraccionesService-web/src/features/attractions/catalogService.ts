@@ -12,12 +12,11 @@ import { SORT_OPTIONS, type CatalogFilters } from './filters';
 export type CatalogDataSource = 'api' | 'demo';
 
 /**
- * El contrato exige `attractions:read` también para leer el catálogo. En modo `auto`, sin sesión se muestra
- * el catálogo de demostración y, con sesión, el API real.
+ * La lectura del catálogo es pública en el API, así que se consulta siempre (con o sin sesión). El catálogo de
+ * demostración solo se usa con `VITE_CATALOG_SOURCE=demo`, para trabajar en la web sin el backend.
  */
 export function resolveCatalogSource(): CatalogDataSource {
-  if (env.catalogSource === 'api' || env.catalogSource === 'demo') return env.catalogSource;
-  return useAuthStore.getState().status === 'authenticated' ? 'api' : 'demo';
+  return env.catalogSource === 'demo' ? 'demo' : 'api';
 }
 
 const MAX_API_PAGES = 5;
@@ -59,8 +58,12 @@ export async function fetchAttraction(id: string, signal?: AbortSignal): Promise
 }
 
 /** Con sesión siempre se consulta el API, porque la reserva y la compra se validan contra él. */
-export async function fetchAvailability(id: string, date: IsoDate, signal?: AbortSignal): Promise<Availability> {
-  const useApi = useAuthStore.getState().status === 'authenticated' || env.catalogSource === 'api';
+export async function fetchAvailability(
+  id: string,
+  date: IsoDate,
+  signal?: AbortSignal,
+): Promise<Availability> {
+  const useApi = resolveCatalogSource() === 'api' || useAuthStore.getState().status === 'authenticated';
   return useApi ? availabilityApi.getAvailability(id, date, signal) : demoAvailability(id, date);
 }
 

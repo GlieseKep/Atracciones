@@ -104,11 +104,9 @@ identificador.
 - Idempotencia en cada mutación.
 - Pruebas e2e de compra, pago, cancelación, concurrencia e idempotencia en `apps/api/test/api.e2e.test.ts`.
 
-**Observación:** sin iniciar sesión, la web muestra el **catálogo de demostración** (`demoCatalog.ts`). El contrato
-exige el scope `attractions:read` incluso para leer, y con sesión los datos vienen del API. Si el evaluador navega sin
-cuenta, no está viendo la base de datos. **Mejora:** marcar `GET /atracciones`, `POST /atracciones/search`,
-`GET /atracciones/{id}` y `/availability` como `@Public()` en `catalog.controllers.ts`, para que el catálogo público
-también salga de PostgreSQL.
+**Catálogo público:** la lectura (`GET /atracciones`, `POST /atracciones/search`, `POST /atracciones/details`,
+`GET /atracciones/{id}` y `/availability`) es `@Public()` en `catalog.controllers.ts`. Un visitante sin cuenta ve los
+datos reales de PostgreSQL; reservar y comprar sí exigen iniciar sesión.
 
 ---
 
@@ -267,7 +265,7 @@ documentos nuevos desde el `README.md`.
 
 | Prioridad | Mejora | Criterio relacionado | Esfuerzo | Requiere código |
 |---|---|---|---|---|
-| 1 | Hacer pública la lectura del catálogo para que un visitante sin cuenta vea los datos reales de PostgreSQL y no el catálogo de demostración | 3 | Bajo | Sí |
+| ✅ | ~~Hacer pública la lectura del catálogo~~ (hecho) | 3 | Bajo | Sí |
 | 2 | Enlazar ARQUITECTURA, INTEROPERABILIDAD y EVENTOS desde el `README.md` | 9 | Muy bajo | No |
 | 3 | Esquemas de respuesta en `/admin/*` y Swagger en dev-auth | 4, 7 | Bajo | Sí |
 | 4 | Exportar el OpenAPI a un archivo versionado y comprobar cambios incompatibles en CI | 6 | Bajo | Sí (CI) |

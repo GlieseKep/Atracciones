@@ -19,6 +19,20 @@ function LocationProbe() {
 
 const teleferico = DEMO_ATTRACTIONS[0];
 
+// La disponibilidad sale del API (lectura pública); en las pruebas se responde con dos franjas fijas.
+vi.mock('@/api/availability', () => ({
+  getAvailability: (_id: string, date: string) =>
+    Promise.resolve({
+      date,
+      timeZone: 'America/Guayaquil',
+      availableSpots: 25,
+      times: [
+        { time: '09:00', availableSpots: 20, status: 'AVAILABLE' },
+        { time: '14:00', availableSpots: 5, status: 'AVAILABLE' },
+      ],
+    }),
+}));
+
 beforeEach(() => {
   useAuthStore.getState().clear();
   useWishlistStore.setState({ ids: [] });

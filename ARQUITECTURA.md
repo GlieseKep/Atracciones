@@ -149,8 +149,8 @@ AtraccionesService-web/src/
 
 - **Sesión:** el token se guarda **solo en memoria**, nunca en `localStorage`. Al recargar la pestaña hay que volver a
   iniciar sesión.
-- **Catálogo:** sin sesión se muestra un catálogo de demostración con los mismos identificadores; con sesión, los
-  datos vienen del API.
+- **Catálogo:** la lectura es pública en el API, así que la web muestra los datos de PostgreSQL con o sin sesión. El
+  catálogo de demostración (`demoCatalog.ts`) solo se usa con `VITE_CATALOG_SOURCE=demo`, para trabajar sin backend.
 - **Mutaciones:** cada intento lógico genera una `Idempotency-Key`. Los reintentos por errores de red reutilizan la
   misma clave.
 - **Configuración de compilación:** `VITE_API_URL` y `VITE_AUTH_URL`.
@@ -369,7 +369,7 @@ Prefijo `/api/v1`. La documentación interactiva completa está en `/docs` y el 
 
 | Grupo | Endpoints | Scope / permiso |
 |---|---|---|
-| Catálogo (lectura) | `POST /atracciones/search`, `POST /atracciones/details`, `GET /atracciones`, `GET /atracciones/{id}`, `GET /atracciones/{id}/availability` | `attractions:read` |
+| Catálogo (lectura) | `POST /atracciones/search`, `POST /atracciones/details`, `GET /atracciones`, `GET /atracciones/{id}`, `GET /atracciones/{id}/availability` | Público (sin token) |
 | Catálogo (escritura) | `POST /atracciones`, `PUT/PATCH/DELETE /atracciones/{id}` | `attractions:write` + `catalog:write` |
 | Reservas | `POST /atracciones/{id}/reservations`, `GET /atracciones/reservations[/{id}]`, `POST /atracciones/reservations/{id}/cancel` | `book` / `read` / `cancel` |
 | Identidad y cliente | `POST /auth/register`, `GET /users/me`, `GET/PUT /customers/me`, `GET /customers/me/reservations` | `read` / `book` |

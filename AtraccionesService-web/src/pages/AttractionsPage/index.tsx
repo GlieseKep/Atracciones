@@ -28,7 +28,7 @@ export default function AttractionsPage() {
   const [params, setParams] = useSearchParams();
   const filters = useMemo(() => parseFilters(params), [params]);
   const { status, error, retry, page, facets, source, data } = useAttractions(filters);
-  const { signIn, isAuthenticated } = useAuth();
+  const { signIn } = useAuth();
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [layout, setLayout] = useState<'grid' | 'list'>(() => {
     try {
@@ -75,11 +75,8 @@ export default function AttractionsPage() {
         {filters.q ? `Resultados para “${filters.q}”` : `Cosas que hacer en ${place}`}
       </h1>
 
-      {source === 'demo' && !isAuthenticated && (
-        <Alert className="mt-4">
-          Estás viendo el catálogo de demostración. <button type="button" className="link" onClick={() => signIn()}>Inicia sesión</button> para
-          consultar el catálogo y la disponibilidad reales del servicio.
-        </Alert>
+      {source === 'demo' && (
+        <Alert className="mt-4">Estás viendo el catálogo de demostración (sin conexión al API).</Alert>
       )}
 
       <div className="mt-6 grid grid-cols-1 gap-8 lg:grid-cols-[264px_1fr]">
@@ -93,7 +90,9 @@ export default function AttractionsPage() {
               <SlidersHorizontal size={16} aria-hidden="true" /> Filtros{count ? ` (${count})` : ''}
             </Button>
             <p className="text-sm text-ink-soft" role="status" aria-live="polite">
-              {status === 'loading' && !data ? 'Buscando…' : `${total} ${total === 1 ? 'resultado' : 'resultados'}`}
+              {status === 'loading' && !data
+                ? 'Buscando…'
+                : `${total} ${total === 1 ? 'resultado' : 'resultados'}`}
             </p>
             <div className="ml-auto flex items-center gap-2">
               <Select
@@ -104,7 +103,11 @@ export default function AttractionsPage() {
                 onChange={(e) => update({ sort: e.target.value as SortOption })}
                 options={SORT_OPTIONS.map((o) => ({ value: o.value, label: `Ordenar: ${o.label}` }))}
               />
-              <div className="hidden rounded-full border border-line p-0.5 sm:flex" role="group" aria-label="Vista">
+              <div
+                className="hidden rounded-full border border-line p-0.5 sm:flex"
+                role="group"
+                aria-label="Vista"
+              >
                 {(['grid', 'list'] as const).map((l) => (
                   <button
                     key={l}
@@ -114,7 +117,11 @@ export default function AttractionsPage() {
                     aria-label={l === 'grid' ? 'Vista en cuadrícula' : 'Vista en lista'}
                     className={`rounded-full p-2 ${layout === l ? 'bg-ink text-white' : 'hover:bg-surface'}`}
                   >
-                    {l === 'grid' ? <LayoutGrid size={16} aria-hidden="true" /> : <List size={16} aria-hidden="true" />}
+                    {l === 'grid' ? (
+                      <LayoutGrid size={16} aria-hidden="true" />
+                    ) : (
+                      <List size={16} aria-hidden="true" />
+                    )}
                   </button>
                 ))}
               </div>
@@ -148,7 +155,9 @@ export default function AttractionsPage() {
             )}
           </div>
 
-          {page && <Pagination page={page.page} totalPages={page.totalPages} onPage={(p) => update({ page: p })} />}
+          {page && (
+            <Pagination page={page.page} totalPages={page.totalPages} onPage={(p) => update({ page: p })} />
+          )}
         </section>
       </div>
 

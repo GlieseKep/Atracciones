@@ -39,11 +39,14 @@ Detrás de un API Gateway, la ruta pública recomendada es `https://<gateway>/at
 
 | Endpoint | Consumidor previsto | Scope | Estabilidad |
 |---|---|---|---|
-| `POST /atracciones/search` | Buscador global del marketplace, agregadores, metabuscadores | `attractions:read` | Estable |
-| `POST /atracciones/details` | Servicios que necesitan varias fichas por id (carrito global, comparadores, recomendaciones) | `attractions:read` | Estable |
-| `GET /atracciones` | Sincronización por lotes del catálogo (paginado) | `attractions:read` | Estable |
-| `GET /atracciones/{id}` | Ficha de detalle, enlaces profundos | `attractions:read` | Estable |
-| `GET /atracciones/{id}/availability?date=YYYY-MM-DD` | Canales de venta externos, chatbots, agencias | `attractions:read` | Estable |
+| `POST /atracciones/search` | Buscador global del marketplace, agregadores, metabuscadores | Público (sin token) | Estable |
+| `POST /atracciones/details` | Servicios que necesitan varias fichas por id (carrito global, comparadores, recomendaciones) | Público (sin token) | Estable |
+| `GET /atracciones` | Sincronización por lotes del catálogo (paginado) | Público (sin token) | Estable |
+| `GET /atracciones/{id}` | Ficha de detalle, enlaces profundos | Público (sin token) | Estable |
+| `GET /atracciones/{id}/availability?date=YYYY-MM-DD` | Canales de venta externos, chatbots, agencias | Público (sin token) | Estable |
+
+La lectura del catálogo es pública para que cualquier canal pueda mostrarlo sin credenciales; el límite de solicitudes
+se aplica por IP. Reservar, comprar y leer datos propios sí exigen token.
 
 Ejemplo de búsqueda:
 
@@ -129,7 +132,7 @@ Cada reserva pertenece a la identidad del token (`iss` + `sub`). Un socio solo v
 
 | Scope | Permite |
 |---|---|
-| `attractions:read` | Leer catálogo, disponibilidad y reservas o pedidos propios |
+| `attractions:read` | Leer reservas o pedidos propios (el catálogo y la disponibilidad son públicos) |
 | `attractions:book` | Reservar, comprar y pagar |
 | `attractions:cancel` | Cancelar reservas o pedidos propios |
 | `attractions:write` | Administración (además requiere permiso local en base de datos) |

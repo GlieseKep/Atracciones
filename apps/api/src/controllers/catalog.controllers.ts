@@ -15,7 +15,7 @@ import {
   type LocationDto,
 } from '@atracciones/contracts';
 import type { Response } from 'express';
-import { CurrentUser, RequirePermission, RequireScope, Scopes, type AuthenticatedRequest } from '../auth/auth';
+import { CurrentUser, Public, RequirePermission, RequireScope, Scopes, type AuthenticatedRequest } from '../auth/auth';
 import { BUSINESS } from '../config';
 import { IDEMPOTENCY_HEADER, IdempotencyKey, ParseResourceId } from '../http/request-helpers';
 import { attractionLink, toAttractionResponse, toAvailabilityResponse } from '../http/responses';
@@ -63,15 +63,18 @@ const toPatch = (r: UpdateAttractionRequest): AttractionPatch => ({
 
 const idempotencyDoc = ApiHeader({ name: IDEMPOTENCY_HEADER, required: true, description: 'UUID único por intento lógico de la operación.' });
 
+/**
+ * Catálogo. La lectura (listado, búsqueda, detalle y disponibilidad) es pública para que el marketplace y otros
+ * sistemas la consulten sin cuenta; crear, editar y eliminar exigen `attractions:write` y el permiso `catalog:write`.
+ */
 @ApiTags('Catálogo')
-@ApiBearerAuth()
 @Controller('atracciones')
 export class AttractionsController {
   constructor(@Inject(BUSINESS) private readonly business: BusinessServices) {}
 
   @Post('search')
   @HttpCode(200)
-  @RequireScope(Scopes.Read)
+  @Public()
   @ApiOperation({ summary: 'Buscar atracciones por destino, fechas y valoración' })
   @ApiResponse({ status: 200, type: SearchAttractionsResponse })
   async search(@Body() body: SearchAttractionsRequest, @Req() request: AuthenticatedRequest): Promise<SearchAttractionsResponse> {
@@ -96,7 +99,7 @@ export class AttractionsController {
 
   @Post('details')
   @HttpCode(200)
-  @RequireScope(Scopes.Read)
+  @Public()
   @ApiOperation({ summary: 'Obtener varias atracciones por identificador' })
   @ApiResponse({ status: 200, type: SearchAttractionsResponse })
   async details(@Body() body: DetailsRequest, @Req() request: AuthenticatedRequest): Promise<SearchAttractionsResponse> {
@@ -105,8 +108,8 @@ export class AttractionsController {
   }
 
   @Get()
-  @RequireScope(Scopes.Read)
-  @Header('Cache-Control', 'private, max-age=60')
+  @Public()
+  @Header('Cache-Control', 'public, max-age=60')
   @ApiOperation({ summary: 'Listar atracciones paginadas' })
   @ApiResponse({ status: 200, type: PaginatedAttractionResponse })
   async list(@Query() query: ListAttractionsQuery): Promise<PaginatedAttractionResponse> {
@@ -118,6 +121,7 @@ export class AttractionsController {
   }
 
   @Post()
+  @ApiBearerAuth()
   @RequireScope(Scopes.Write)
   @RequirePermission(LocalPermissions.CatalogWrite)
   @idempotencyDoc
@@ -135,8 +139,8 @@ export class AttractionsController {
   }
 
   @Get(':id')
-  @RequireScope(Scopes.Read)
-  @Header('Cache-Control', 'private, max-age=60')
+  @Public()
+  @Header('Cache-Control', 'public, max-age=60')
   @ApiOperation({ summary: 'Detalle de una atracción' })
   @ApiResponse({ status: 200, type: AttractionResponse })
   async get(@Param('id', ParseResourceId) id: string): Promise<AttractionResponse> {
@@ -145,6 +149,7 @@ export class AttractionsController {
 
   @Put(':id')
   @HttpCode(204)
+  @ApiBearerAuth()
   @RequireScope(Scopes.Write)
   @RequirePermission(LocalPermissions.CatalogWrite)
   @idempotencyDoc
@@ -159,6 +164,7 @@ export class AttractionsController {
   }
 
   @Patch(':id')
+  @ApiBearerAuth()
   @RequireScope(Scopes.Write)
   @RequirePermission(LocalPermissions.CatalogWrite)
   @idempotencyDoc
@@ -175,6 +181,7 @@ export class AttractionsController {
 
   @Delete(':id')
   @HttpCode(204)
+  @ApiBearerAuth()
   @RequireScope(Scopes.Write)
   @RequirePermission(LocalPermissions.CatalogWrite)
   @idempotencyDoc
@@ -184,7 +191,7 @@ export class AttractionsController {
   }
 
   @Get(':id/availability')
-  @RequireScope(Scopes.Read)
+  @Public()
   @ApiOperation({ summary: 'Disponibilidad de una fecha (hora local de la atracción)' })
   @ApiResponse({ status: 200, type: AvailabilityResponse })
   async availability(@Param('id', ParseResourceId) id: string, @Query() query: AvailabilityQuery): Promise<AvailabilityResponse> {

@@ -15,7 +15,7 @@ Solo el frontend: `npm install && npm run dev` (usa `.env.development`; para otr
 |---|---|
 | `VITE_API_URL` | URL del API sin `/api/v1` |
 | `VITE_AUTH_URL` | Servicio de autenticación (registro e inicio de sesión) |
-| `VITE_CATALOG_SOURCE` | `auto` (por defecto), `api` o `demo` |
+| `VITE_CATALOG_SOURCE` | `auto` (por defecto) o `api`: catálogo del API; `demo`: catálogo local sin backend |
 
 | Script | Uso |
 |---|---|
@@ -26,9 +26,9 @@ Solo el frontend: `npm install && npm run dev` (usa `.env.development`; para otr
 
 ## Catálogo y autenticación
 
-- El contrato exige `attractions:read` incluso para leer el catálogo. Con `VITE_CATALOG_SOURCE=auto`, sin sesión se
-  muestra el catálogo de demostración (`src/features/attractions/demoCatalog.ts`) y con sesión, el API. Ambos usan
-  los mismos identificadores, así que los enlaces siguen funcionando al iniciar sesión.
+- La lectura del catálogo y de la disponibilidad es pública en el API, así que con `VITE_CATALOG_SOURCE=auto` (o `api`)
+  la web muestra siempre los datos de PostgreSQL, con o sin sesión. Con `demo` usa el catálogo local
+  (`src/features/attractions/demoCatalog.ts`) para trabajar en la web sin el backend.
 - Registro e inicio de sesión con formularios propios (`/registro`, `/login`) contra el servicio de autenticación, que
   devuelve un JWT. El token vive solo en memoria: recargar la pestaña cierra la sesión.
 - Reservas, compras, pedidos y pagos siempre usan el API, con `Idempotency-Key` por intento lógico de mutación.
