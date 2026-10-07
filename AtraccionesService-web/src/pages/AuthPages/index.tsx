@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ShieldCheck } from 'lucide-react';
 import { z } from 'zod';
+import { ADMIN_SCOPE } from '@/api/admin';
 import { login, register } from '@/api/auth';
 import { Button } from '@/components/common/Button';
 import { Alert } from '@/components/common/Feedback';
@@ -11,7 +12,7 @@ import { Input } from '@/components/common/Input';
 import { photoAt } from '@/components/attractions/AttractionCard';
 import { DEMO_ATTRACTIONS } from '@/features/attractions/demoCatalog';
 import { AuthError } from '@/features/auth/session';
-import { useAuthStore } from '@/stores/authStore';
+import { hasScope, useAuthStore } from '@/stores/authStore';
 import { useUiStore } from '@/stores/uiStore';
 import { paths, safeReturnPath } from '@/utils/routes';
 
@@ -37,6 +38,11 @@ const registerSchema = z
 type LoginValues = z.infer<typeof loginSchema>;
 type RegisterValues = z.infer<typeof registerSchema>;
 
+/** Sin ruta solicitada, los administradores entran directamente al panel. */
+function destination(returnTo: string) {
+  return returnTo === '/' && hasScope(useAuthStore.getState().claims, ADMIN_SCOPE) ? paths.admin() : returnTo;
+}
+
 /** Si ya hay sesión, vuelve directamente a la ruta solicitada. */
 function useReturnTo() {
   const [params] = useSearchParams();
@@ -44,7 +50,7 @@ function useReturnTo() {
   const returnTo = safeReturnPath(params.get('returnTo'));
   const authenticated = useAuthStore((s) => s.status === 'authenticated');
   useEffect(() => {
-    if (authenticated) navigate(returnTo, { replace: true });
+    if (authenticated) navigate(destination(returnTo), { replace: true });
   }, [authenticated, navigate, returnTo]);
   return returnTo;
 }
@@ -97,7 +103,7 @@ export function LoginPage() {
     try {
       await login(values.email, values.password);
       notify('¡Hola de nuevo!', 'success');
-      navigate(returnTo, { replace: true });
+      navigate(destination(returnTo), { replace: true });
     } catch (error) {
       setError('root', { message: describe(error).message });
     }
